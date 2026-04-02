@@ -1,18 +1,21 @@
 import { useMissionStore } from '../../store/missionStore'
-import trajectory from '../../data/mockTrajectory.json'
+import trajectory from '../../data/trajectory.json'
 
-const LAST_IDX = trajectory.length - 1
+const LAST_IDX = trajectory.length - 1  // 3211
 
+// Phase boundaries aligned to the 3212-point real OEM trajectory
 const PHASES: Array<[number, string]> = [
-  [4,        'Launch'],
-  [9,        'Translunar Injection'],
-  [24,       'Translunar Coast'],
-  [29,       'Lunar Flyby'],
+  [324,      'Outbound Coast'],
+  [399,      'Earth Close Pass'],
+  [1114,     'Translunar Coast'],
+  [1756,     'Lunar Approach'],
+  [2415,     'Lunar Flyby'],
+  [3099,     'Return Coast'],
   [LAST_IDX, 'Return & Reentry'],
 ]
 
 function getPhase(idx: number): string {
-  return PHASES.find(([max]) => idx <= max)?.[1] ?? 'RETURN & REENTRY'
+  return PHASES.find(([max]) => idx <= max)?.[1] ?? 'Return & Reentry'
 }
 
 export default function MissionIdentity() {

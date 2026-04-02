@@ -1,29 +1,35 @@
 import * as THREE from 'three'
-import trajectory from './mockTrajectory.json'
+import trajectory from './trajectory.json'
 
 // ── PRD: 1 unit = 1,000 km ─────────────────────────────────────────────────
-// Earth radius  → 6.371 units (true proportional scale)
-// Moon distance → 384.4 units
-// Max trajectory→ ~460 units
+// Coordinates are in the EME2000 Earth-centred inertial frame (km).
+// Earth is at the origin; all positions are geocentric.
 export const SCENE_SCALE = 1 / 1_000
-export const Y_COMPRESS  = 1.0   // no compression; traj.z maps 1:1 to scene Y
+export const Y_COMPRESS  = 1.0
 
-export const LAST = trajectory.length - 1  // 49
+export const LAST = trajectory.length - 1  // 3211
 
 // ── Planet radii (scene units) ──────────────────────────────────────────────
-export const EARTH_R = 6.371           // real proportional radius
-export const MOON_R  = 3.5            // exaggerated for visibility (real = 1.737)
+export const EARTH_R = 6.371           // proportional (km → units)
+export const MOON_R  = 3.5             // exaggerated for visibility (real = 1.737)
 
-// Moon scene-space position (Earth→Moon axis maps to scene -Z)
-export const MOON_POS = new THREE.Vector3(0, 0, -384.4)
+// ── Moon position ────────────────────────────────────────────────────────────
+// Approximate EME2000 position at closest approach (2026-04-06T23:07, idx 1757).
+// The spacecraft reaches ~413,146 km from Earth at flyby; the Moon is ~8,900 km
+// from the surface at that point, so this is a very close approximation.
+export const MOON_EME = { x: -131_863, y: -343_137, z: -188_571 } // km
 
-// Moon km-coordinates for Distance·Moon telemetry calculation
-export const MOON_KM = { x: 0, y: 384_400, z: 0 }
+// Moon in scene space: same toSceneVec mapping as trajectory points
+export const MOON_POS = new THREE.Vector3(
+  MOON_EME.x * SCENE_SCALE,           // scene X
+  MOON_EME.z * SCENE_SCALE,           // scene Y  (EME2000 Z → scene Y)
+  -MOON_EME.y * SCENE_SCALE,          // scene Z  (EME2000 -Y → scene Z)
+)
 
 // ── Coordinate mapping ──────────────────────────────────────────────────────
-// traj.y  →  scene -Z  (primary Earth→Moon depth axis)
-// traj.z  →  scene  Y  (orbital inclination, out-of-plane)
-// traj.x  →  scene  X  (lateral / cross-track drift)
+// EME2000 X → scene  X  (lateral)
+// EME2000 Z → scene  Y  (out-of-plane / up)
+// EME2000 Y → scene -Z  (Earth→Moon depth)
 export function toSceneVec(x: number, y: number, z: number): THREE.Vector3 {
   return new THREE.Vector3(
     x * SCENE_SCALE,
@@ -32,7 +38,7 @@ export function toSceneVec(x: number, y: number, z: number): THREE.Vector3 {
   )
 }
 
-// ── Smooth CatmullRom spline through all 50 waypoints ──────────────────────
+// ── Smooth CatmullRom spline through all 3212 waypoints ───────────────────
 export const missionCurve = new THREE.CatmullRomCurve3(
   trajectory.map(p => toSceneVec(p.x, p.y, p.z)),
   false,

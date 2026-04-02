@@ -1,15 +1,17 @@
 import { useEffect, useRef } from 'react'
 import { useMissionStore } from '../../store/missionStore'
-import trajectory from '../../data/mockTrajectory.json'
+import trajectory from '../../data/trajectory.json'
 
-const LAST = trajectory.length - 1
+const LAST = trajectory.length - 1  // 3211
+
+// Phase tick marks mapped to the 3212-point real OEM trajectory
 const PHASES = [
-  { idx: 0, label: 'LAUNCH' },
-  { idx: 9, label: 'TLI' },
-  { idx: 15, label: 'TRANSIT' },
-  { idx: 29, label: 'FLYBY' },
-  { idx: 40, label: 'RETURN' },
-  { idx: 48, label: 'REENTRY' },
+  { idx: 0,    label: 'DEPART' },
+  { idx: 325,  label: 'EARTH PASS' },
+  { idx: 1115, label: 'LUNAR SOI' },
+  { idx: 1757, label: 'FLYBY' },
+  { idx: 2416, label: 'RETURN' },
+  { idx: 3180, label: 'REENTRY' },
 ]
 
 export default function PhaseScrubber() {
@@ -79,7 +81,7 @@ export default function PhaseScrubber() {
 
         <div style={{ flex: 1, position: 'relative', height: '3.75rem', display: 'flex', alignItems: 'center' }}>
           <div style={{ position: 'absolute', width: '100%', height: '1px', background: '#222' }} />
-          
+
           {/* Scrubber thumb */}
           <div style={{
             position: 'absolute',
@@ -105,8 +107,8 @@ export default function PhaseScrubber() {
               </div>
             </div>
           ))}
-          
-          <div 
+
+          <div
             onClick={() => { setIsPlaying(false); setMissionTime(LAST); }}
             style={{
             position: 'absolute',
@@ -116,18 +118,18 @@ export default function PhaseScrubber() {
             cursor: 'pointer',
             display: 'flex', alignItems: 'center', gap: '0.5rem'
           }}>
-            <div style={{ 
-                width: '0.375rem', height: '0.375rem', 
-                background: isLive ? '#ff3333' : '#222', 
-                borderRadius: '50%', 
-                animation: isLive ? 'pulse 1s infinite' : 'none' 
+            <div style={{
+                width: '0.375rem', height: '0.375rem',
+                background: isLive ? '#ff3333' : '#222',
+                borderRadius: '50%',
+                animation: isLive ? 'pulse 1s infinite' : 'none'
             }} />
             <div style={{ fontSize: '0.625rem', color: isLive ? '#fff' : '#444', letterSpacing: '0.125rem' }}>
               LIVE
             </div>
           </div>
 
-          <input 
+          <input
             type="range" min={0} max={LAST} value={currentMissionTime}
             onChange={(e) => { setIsPlaying(false); setMissionTime(Number(e.target.value)) }}
             style={{

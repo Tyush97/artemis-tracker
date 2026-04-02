@@ -1,21 +1,40 @@
 import { useMissionStore } from '../../store/missionStore'
+import { MOON_EME } from '../../data/missionCurve'
 
+// Phase thresholds mapped to the 3212-point real OEM trajectory
+// Key indices: ~325 earth close-pass, 1115 lunar SOI, 1757 flyby, 2416 SOI exit
 function getPhase(idx: number): string {
-  if (idx < 5) return 'LAUNCH'
-  if (idx < 10) return 'TLI BURN'
-  if (idx < 25) return 'T-CRUISE'
-  if (idx < 30) return 'FLYBY'
-  return 'RETURN'
+  if (idx < 325)  return 'OUTBOUND'
+  if (idx < 400)  return 'EARTH PASS'
+  if (idx < 1115) return 'T-CRUISE'
+  if (idx < 1757) return 'LUNAR APPROACH'
+  if (idx < 2416) return 'LUNAR FLYBY'
+  if (idx < 3100) return 'RETURN'
+  return 'REENTRY'
 }
 
 export default function TelemetryStrip() {
   const { currentVector, currentMissionTime } = useMissionStore()
 
+  const distEarth = Math.round(Math.sqrt(
+    currentVector.x ** 2 + currentVector.y ** 2 + currentVector.z ** 2,
+  ))
+
+  const distMoon = Math.round(Math.sqrt(
+    (currentVector.x - MOON_EME.x) ** 2 +
+    (currentVector.y - MOON_EME.y) ** 2 +
+    (currentVector.z - MOON_EME.z) ** 2,
+  ))
+
+  const velocity = Math.sqrt(
+    currentVector.vx ** 2 + currentVector.vy ** 2 + currentVector.vz ** 2,
+  )
+
   const metrics = [
-    { label: 'DIST. EARTH', value: `${currentVector.distanceFromEarth.toLocaleString()} km` },
-    { label: 'DIST. MOON', value: `${Math.round(384400 - currentVector.distanceFromEarth).toLocaleString()} km` },
-    { label: 'VELOCITY', value: `${currentVector.velocity.toFixed(1)} km/s` },
-    { label: 'PHASE', value: getPhase(currentMissionTime) },
+    { label: 'DIST. EARTH', value: `${distEarth.toLocaleString()} km` },
+    { label: 'DIST. MOON',  value: `${distMoon.toLocaleString()} km` },
+    { label: 'VELOCITY',    value: `${velocity.toFixed(2)} km/s` },
+    { label: 'PHASE',       value: getPhase(currentMissionTime) },
   ]
 
   return (

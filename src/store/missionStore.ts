@@ -1,13 +1,14 @@
 import { create } from 'zustand'
-import trajectoryData from '../data/mockTrajectory.json'
+import trajectoryData from '../data/trajectory.json'
 
 export interface StateVector {
   timestamp: string
-  x: number
-  y: number
-  z: number
-  velocity: number
-  distanceFromEarth: number
+  x: number   // km, EME2000
+  y: number   // km, EME2000
+  z: number   // km, EME2000
+  vx: number  // km/s
+  vy: number  // km/s
+  vz: number  // km/s
 }
 
 const trajectory: StateVector[] = trajectoryData

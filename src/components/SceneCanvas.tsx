@@ -12,7 +12,9 @@ import {
 const CURVE_PTS = missionCurve.getPoints(300)
 
 const SHIP_OFFSET = new THREE.Vector3(2, 2, 2)
-const TOP_DOWN_TGT = new THREE.Vector3(0, 0, -150)
+// Centroid of the real EME2000 trajectory in scene XZ (midpoint Earth→flyby):
+// flyby scene coords ≈ (-131.9, -188.6, 343.1) → XZ centre ≈ (-64, 0, 170)
+const TOP_DOWN_TGT = new THREE.Vector3(-64, 0, 170)
 
 function RangeRings() {
   const ringsData = [
@@ -159,7 +161,7 @@ function CameraController({ controlsRef }: { controlsRef: ControlsRef }) {
     if (cameraMode === 'overview') {
       if (!settled.current) {
         const height = ZOOM_MAX_DIST - (zoomLevel / 100) * (ZOOM_MAX_DIST - ZOOM_MIN_DIST)
-        const overviewCamPos = new THREE.Vector3(0, height, -150)
+        const overviewCamPos = new THREE.Vector3(-64, height, -30)
 
         camera.position.lerp(overviewCamPos, delta * 2)
         controlsRef.current.target.lerp(TOP_DOWN_TGT, delta * 2)
@@ -208,7 +210,7 @@ export default function SceneCanvas() {
 
   return (
     <Canvas
-      camera={{ position: [0, 800, -150], fov: 45, near: 0.1, far: 5000 }}
+      camera={{ position: [-64, 800, -30], fov: 45, near: 0.1, far: 5000 }}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
       style={{ position: 'absolute', inset: 0, background: '#000', cursor: cursorStyle, zIndex: 0 }}
     >

@@ -1,5 +1,5 @@
 import { useMissionStore } from '../../store/missionStore'
-import trajectory from '../../data/mockTrajectory.json'
+import trajectory from '../../data/trajectory.json'
 
 export default function MissionElapsed() {
   const { currentMissionTime } = useMissionStore()
