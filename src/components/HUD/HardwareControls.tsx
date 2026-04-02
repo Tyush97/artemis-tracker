@@ -1,9 +1,56 @@
 import { useRef } from 'react'
 import { useMissionStore } from '../../store/missionStore'
 
+// Hand / pan
+const HandIcon = ({ color }: { color: string }) => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
+    <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2" />
+    <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8" />
+    <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+  </svg>
+)
+
+// Mouse cursor / pointer arrow
+const CursorIcon = ({ color }: { color: string }) => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill={color} stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 4l7.07 17 2.51-7.39L21 11.07 4 4z" />
+  </svg>
+)
+
+// Crosshair target
+const TargetIcon = ({ color }: { color: string }) => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round">
+    <circle cx="12" cy="12" r="8" />
+    <circle cx="12" cy="12" r="2.5" />
+    <line x1="12" y1="2" x2="12" y2="5.5" />
+    <line x1="12" y1="18.5" x2="12" y2="22" />
+    <line x1="2" y1="12" x2="5.5" y2="12" />
+    <line x1="18.5" y1="12" x2="22" y2="12" />
+  </svg>
+)
+
+// 3D cube
+const CubeIcon = ({ color }: { color: string }) => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+    <line x1="12" y1="22.08" x2="12" y2="12" />
+  </svg>
+)
+
+// Top-down grid (square)
+const TopDownIcon = ({ color }: { color: string }) => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="12" y1="3" x2="12" y2="21" />
+  </svg>
+)
+
 export default function HardwareControls() {
   const { cameraMode, setCameraMode, controlMode, setControlMode, zoomLevel, setZoomLevel } = useMissionStore()
-  
+
   const sliderRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
 
@@ -12,159 +59,128 @@ export default function HardwareControls() {
     updateZoom(e.clientY)
     e.currentTarget.setPointerCapture(e.pointerId)
   }
-
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (isDragging.current) {
-      updateZoom(e.clientY)
-    }
+    if (isDragging.current) updateZoom(e.clientY)
   }
-
   const handlePointerUp = (e: React.PointerEvent) => {
     isDragging.current = false
     e.currentTarget.releasePointerCapture(e.pointerId)
   }
-
   const updateZoom = (clientY: number) => {
     if (!sliderRef.current) return
     const rect = sliderRef.current.getBoundingClientRect()
     let pct = 1 - (clientY - rect.top) / rect.height
-    pct = Math.max(0, Math.min(1, pct))
-    setZoomLevel(Math.round(pct * 100))
+    setZoomLevel(Math.round(Math.max(0, Math.min(1, pct)) * 100))
+  }
+  const nudgeZoom = (delta: number) =>
+    setZoomLevel(Math.max(0, Math.min(100, zoomLevel + delta)))
+
+  // Shared square icon button style
+  const sq = (active: boolean): React.CSSProperties => ({
+    background: active ? '#fff' : 'transparent',
+    border: '1px solid ' + (active ? '#fff' : '#444'),
+    width: '2.5rem',
+    height: '2.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    padding: 0,
+    flexShrink: 0,
+  })
+
+  // Nudge button (+ / −)
+  const nudgeStyle: React.CSSProperties = {
+    background: 'transparent',
+    border: '1px solid #444',
+    color: '#666',
+    width: '1.75rem',
+    height: '1.75rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    fontSize: '1rem',
+    lineHeight: 1,
+    padding: 0,
+    fontFamily: 'monospace',
   }
 
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      gap: '1.5rem',
-      fontFamily: 'monospace',
+      alignItems: 'flex-start',
+      gap: '0.75rem',
       pointerEvents: 'auto',
     }}>
-      {/* Interaction Mode Buttons */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <button 
-          onClick={() => setControlMode(controlMode === 'pan' ? 'rotate' : 'pan')}
-          style={{
-            background: controlMode === 'pan' ? '#fff' : 'transparent',
-            border: '1px solid #444',
-            color: controlMode === 'pan' ? '#000' : '#888',
-            padding: '0.75rem 0.875rem',
-            width: '9.375rem',
-            textAlign: 'left',
-            fontSize: '0.6875rem',
-            letterSpacing: '0.06rem',
-            cursor: 'pointer',
-            fontWeight: 600,
-          }}
-        >
-          PAN {controlMode === 'pan' ? '[ACTIVE]' : '[INACTIVE]'}
-        </button>
 
-        <button 
-          onClick={() => setControlMode('rotate')}
-          style={{
-            background: controlMode === 'rotate' ? '#fff' : 'transparent',
-            border: '1px solid #444',
-            color: controlMode === 'rotate' ? '#000' : '#888',
-            padding: '0.75rem 0.875rem',
-            width: '9.375rem',
-            textAlign: 'left',
-            fontSize: '0.6875rem',
-            letterSpacing: '0.06rem',
-            cursor: 'pointer',
-            fontWeight: 600,
-          }}
-        >
-          ROTATE {controlMode === 'rotate' ? '[ACTIVE]' : '[INACTIVE]'}
+      {/* Row 1: PAN + ROTATE */}
+      <div style={{ display: 'flex', gap: '0.375rem' }}>
+        <button title="Pan" onClick={() => setControlMode('pan')} style={sq(controlMode === 'pan')}>
+          <HandIcon color={controlMode === 'pan' ? '#000' : '#666'} />
+        </button>
+        <button title="Rotate / Orbit" onClick={() => setControlMode('rotate')} style={sq(controlMode === 'rotate')}>
+          <CursorIcon color={controlMode === 'rotate' ? '#000' : '#666'} />
         </button>
       </div>
 
-      {/* Vertical Zoom Area */}
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        gap: '1.25rem', 
-        paddingLeft: '0.375rem' 
-      }}>
-         <span style={{ fontSize: '0.625rem', color: '#666', letterSpacing: '0.125rem', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>ZOOM — ALTITUDE</span>
-         
-         <div 
-            ref={sliderRef}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            style={{ 
-              position: 'relative', 
-              height: '11.25rem', 
-              width: '2.5rem', 
-              cursor: 'ns-resize',
-              display: 'flex',
-              justifyContent: 'center'
-            }}
-         >
-            <div style={{ width: '2px', height: '100%', background: '#222' }} />
-            <div style={{ 
-              position: 'absolute', 
-              bottom: 0, 
-              width: '2px', 
-              height: `${zoomLevel}%`, 
-              background: '#fff' 
-            }} />
-            <div style={{
-              position: 'absolute',
-              bottom: `${zoomLevel}%`,
-              transform: 'translateY(50%)',
-              width: '0.875rem',
-              height: '0.875rem',
-              background: '#fff',
-              pointerEvents: 'none',
-            }} />
-         </div>
-         
-         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.5625rem', color: '#666' }}>
-            <span>CLOSE</span>
-            <span style={{textAlign: 'center'}}>|</span>
-            <span>FAR</span>
-         </div>
+      {/* Zoom slider */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.375rem', paddingLeft: '0.375rem' }}>
+        <button onClick={() => nudgeZoom(10)} style={nudgeStyle}>+</button>
+
+        <div
+          ref={sliderRef}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          style={{
+            position: 'relative',
+            height: '7rem',
+            width: '2rem',
+            cursor: 'ns-resize',
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <div style={{ width: '1px', height: '100%', background: '#333' }} />
+          <div style={{ position: 'absolute', bottom: 0, width: '1px', height: `${zoomLevel}%`, background: '#888' }} />
+          <div style={{
+            position: 'absolute',
+            bottom: `${zoomLevel}%`,
+            transform: 'translateY(50%)',
+            width: '0.625rem',
+            height: '0.625rem',
+            background: '#fff',
+            pointerEvents: 'none',
+          }} />
+        </div>
+
+        <button onClick={() => nudgeZoom(-10)} style={nudgeStyle}>−</button>
       </div>
 
-      {/* View Presets */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <button 
+      {/* Row 2: SYNC TO SHIP + PERSPECTIVE toggle */}
+      <div style={{ display: 'flex', gap: '0.375rem' }}>
+        <button
+          title="Sync to Ship"
           onClick={() => { setCameraMode('ship'); setControlMode('rotate'); }}
-          style={{
-            background: 'transparent',
-            border: cameraMode === 'ship' ? '1px solid #fff' : '1px solid #444',
-            color: cameraMode === 'ship' ? '#fff' : '#888',
-            padding: '0.75rem 0.875rem',
-            width: '9.375rem',
-            textAlign: 'left',
-            fontSize: '0.6875rem',
-            letterSpacing: '0.06rem',
-            cursor: 'pointer',
-          }}
+          style={sq(cameraMode === 'ship')}
         >
-          SYNC TO SHIP
+          <TargetIcon color={cameraMode === 'ship' ? '#000' : '#666'} />
         </button>
 
-        <button 
+        <button
+          title={cameraMode === 'overview' ? '3D Perspective' : 'Top-Down Radar'}
           onClick={() => setCameraMode(cameraMode === 'overview' ? 'ship' : 'overview')}
-          style={{
-            background: 'transparent',
-            border: '1px solid #444',
-            color: '#aaa',
-            padding: '0.75rem 0.875rem',
-            width: '9.375rem',
-            textAlign: 'left',
-            fontSize: '0.6875rem',
-            letterSpacing: '0.06rem',
-            cursor: 'pointer',
-          }}
+          style={sq(cameraMode === 'overview')}
         >
-           {cameraMode === 'overview' ? '⊡ 3D PERSPECTIVE' : '⊞ TOP-DOWN RADAR'}
+          {cameraMode === 'overview'
+            ? <CubeIcon color="#000" />
+            : <TopDownIcon color="#666" />
+          }
         </button>
       </div>
+
     </div>
   )
 }

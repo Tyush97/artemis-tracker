@@ -32,16 +32,17 @@ export default function App() {
         padding: '1.5rem',
         boxSizing: 'border-box'
       }}>
-        {/* TOP BAR */}
+        {/* TOP BAR — 3-column so MissionIdentity is at true center */}
         <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
+            display: 'grid',
+            gridTemplateColumns: '1fr auto 1fr',
             alignItems: 'flex-start',
             width: '100%',
             marginBottom: '0.625rem'
         }}>
           <div style={{ pointerEvents: 'auto' }}><TelemetryStrip /></div>
-          <div style={{ pointerEvents: 'auto' }}><MissionIdentity /></div>
+          <div style={{ pointerEvents: 'auto', display: 'flex', justifyContent: 'center' }}><MissionIdentity /></div>
+          <div />{/* spacer to keep center column truly centred */}
         </div>
 
         {/* MID SECTION (Sidebars) */}
@@ -49,12 +50,12 @@ export default function App() {
             flex: 1, 
             display: 'flex', 
             justifyContent: 'space-between', 
-            alignItems: 'center',
+            alignItems: 'stretch',
             minHeight: 0,
             width: '100%' 
         }}>
-          <div style={{ pointerEvents: 'auto', height: 'fit-content' }}><HardwareControls /></div>
-          <div style={{ pointerEvents: 'auto', height: 'fit-content' }}><EventTimeline /></div>
+          <div style={{ pointerEvents: 'auto', height: 'fit-content', alignSelf: 'center' }}><HardwareControls /></div>
+          <div style={{ pointerEvents: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}><EventTimeline /></div>
         </div>
 
         {/* BOTTOM BAR */}

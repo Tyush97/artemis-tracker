@@ -13,15 +13,16 @@ export default function TelemetryStrip() {
 
   const metrics = [
     { label: 'DIST. EARTH', value: `${currentVector.distanceFromEarth.toLocaleString()} km` },
-    { label: 'DIST. MOON', value: `${Math.round(384400 - currentVector.distanceFromEarth).toLocaleString()} km` },
-    { label: 'VELOCITY', value: `${currentVector.velocity.toFixed(1)} km/s` },
-    { label: 'PHASE', value: getPhase(currentMissionTime) },
+    { label: 'DIST. MOON',  value: `${Math.round(384400 - currentVector.distanceFromEarth).toLocaleString()} km` },
+    { label: 'VELOCITY',    value: `${currentVector.velocity.toFixed(1)} km/s` },
+    { label: 'PHASE',       value: getPhase(currentMissionTime) },
   ]
 
   return (
     <div style={{
-      display: 'flex',
-      gap: '2.5rem',
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: '0.75rem 2rem',
       color: '#ffffff',
       fontFamily: 'monospace',
       pointerEvents: 'auto',
