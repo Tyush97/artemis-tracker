@@ -11,141 +11,141 @@
 ---
 
 ### 2. Visual Identity & Telemetry UI Framework
-We are targeting a "Premium Fintech in Space" aesthetic. The UI must replicate the high-stakes environment of a modern Mission Control Center but with the polish of high-end SaaS (think Vercel, Linear, or Stripe).
 
-- **Color Palette:** Minimalist dark mode. Space Black (`#050505`), Slate Grey (`#1A1A1A`), with high-contrast text. Use subtle Warning Yellow or Action Red only for critical states.
-- **Typography:** Tabular, monospaced fonts (e.g., JetBrains Mono, Geist Mono, or Space Mono) for live numbers so they animate smoothly without horizontal jitter. Sans-serif fonts (e.g., Inter, Satoshi) for labels.
-- **Data Restraint:** Do not overwhelm the user with engineering noise. Display 4–5 large, beautifully set data points such as Mission Elapsed Time, Distance to Moon, and Speed.
-- **Asset Styling:** The 3D Orion spacecraft should feature a tactile retro-future metallic sheen. Avoid a toy/cartoon look; lean into realistic materials like ceramic off-white, heat-shield scoring, and soft UI reflections.
+**Implemented aesthetic: Terminal Mission Control**
+
+The UI uses a strictly monochromatic, monospace terminal aesthetic — no gradients, no glow effects, no color outside of functional states. This is a deliberate departure from the "Premium Fintech" direction toward something that feels more like real mission control software.
+
+- **Color Palette:** Pure black (`#000000`) background, white text, layered grey accents (`#222`, `#444`, `#666`, `#888`, `#ccc`). Red (`#ff3333`) for live/active state only.
+- **Typography:** Monospace throughout (`fontFamily: 'monospace'`). All labels in uppercase with wide letter-spacing. Numbers use tabular rendering.
+- **Data Layout:** Sparse — labels are small (`0.625rem`), values are readable (`0.875rem`). No card borders, no backgrounds on HUD elements.
+- **3D Spacecraft:** A procedural directional chevron + crosshair ring (white, `meshBasicMaterial`). No GLB model loaded. Orients along spline tangent in real time.
 
 ---
 
 ### 3. The Interactive 3D Canvas & Navigation Engine
-The spatial engine must seamlessly convey the transition from Earth orbit to deep space.
 
-#### Dual-Mode Camera System
-1. **Ship Focus Mode:** A cinematic follow-cam locked onto the Orion spacecraft. Allows users to orbit the ship closely, inspect the Solar Array Wings, and watch the background move.
-2. **System Overview Mode:** The camera pulls far back to frame Earth, the Moon, and the 400,000 km trajectory void. This is the key "wow" feature that visually demonstrates how far the Moon is compared to low Earth orbit.
+**Implemented in `SceneCanvas.tsx` and `OrionModel.tsx`.**
 
-#### Trajectory as a Progress Bar
-The orbital path itself acts as a glowing spline in 3D space. As the timeline progresses, the ship moves along this path, effectively making the 3D trajectory a spatial progress bar.
+#### Coordinate System
+- `1 scene unit = 1,000 km`
+- Trajectory `y` → scene `-Z` (Earth→Moon depth axis)
+- Trajectory `z` → scene `Y` (orbital inclination / out-of-plane)
+- Trajectory `x` → scene `X` (lateral drift)
+- Earth radius: `6.371` scene units (true proportional)
+- Moon radius: `3.5` scene units (exaggerated for visibility; real ≈ 1.737)
+- Moon position: `(0, 0, -384.4)` scene units
 
----
+#### Dual-Mode Camera System (implemented)
+1. **Ship Mode (`cameraMode: 'ship'`):** OrbitControls target lerps to spacecraft position each frame. User can orbit/zoom around the ship freely.
+2. **Overview Mode (`cameraMode: 'overview'`):** Camera lerps toward `OVERVIEW_CAM = (5, 15, 18)`, target lerps to `OVERVIEW_TGT = (0.5, -1.5, -30)`. Frames Earth and the beginning of the trajectory arc.
 
-### 4. Temporal Navigation & Storytelling
-The timeline scrubber at the bottom allows users to move through the 10-day itinerary. NASA jargon should be translated into accessible product-style storytelling while keeping the underlying data accurate.
-
-#### Phase 1: Launch & Undocking (Day 1)
-- **Technical Phase:** SLS Liftoff & ICPS 6DOF Proximity Ops
-- **User-Facing Translation:** "Undocking & Maneuver Tests"
-- **Plain-English Subtitle:** Testing manual controls before heading to deep space.
-- **Key Metric:** Distance to upper stage (meters)
-
-#### Phase 2: Trans-Lunar Injection (Day 2)
-- **Technical Phase:** TLI Burn
-- **User-Facing Translation:** "Leaving Earth Orbit"
-- **Plain-English Subtitle:** Firing engines to break Earth's gravity.
-- **Key Metric:** Velocity spike (km/s)
-
-#### Phase 3: Outbound Transit (Days 3–5)
-- **Technical Phase:** Lunar Sphere of Influence & AVATAR payload radiation flux
-- **User-Facing Translation:** "Deep Space Coast & Radiation Testing"
-- **Key Metric:** Radiation exposure
-- **Visualization Note:** Show comparatively, for example current dose vs. a chest X-ray vs. a 6-month ISS stay.
-
-#### Phase 4: Lunar Flyby (Day 6)
-- **Technical Phase:** Pericynthion & Apollo 13 record break
-- **User-Facing Translation:** "Closest Lunar Approach"
-- **Plain-English Subtitle:** Breaking the Apollo 13 distance record.
-- **Key Metric:** Distance from Earth
-
-#### Phase 5: Return & Reentry (Days 7–10)
-- **Technical Phase:** Direct Entry Profile vs. Skip Entry
-- **User-Facing Translation:** "High-Speed Reentry"
-- **Plain-English Subtitle:** Hitting Earth's atmosphere at 25,000 mph.
-- **Key Metric:** Heat shield peak temperature (°C / °F)
+#### Trajectory Rendering
+- 300-point pre-sampled `CatmullRomCurve3` drawn with `@react-three/drei Line`
+- Past segment: `#5090ff`, `lineWidth 1.8`, `opacity 0.9`
+- Future segment: `#1a3070`, `lineWidth 1.0`, `opacity 0.35`
+- Split point updates each frame based on `currentMissionTime`
 
 ---
 
-### 5. Telemetry Panel Requirements
-The telemetry UI should feel understandable at a glance for a general professional audience.
+### 4. HUD Layout & Component Map
 
-#### Always-visible Metrics
-- Mission Elapsed Time
-- Mission Phase
-- Distance to Earth
-- Distance to Moon
-- Velocity
-- Next Milestone
+**Implemented in `App.tsx` as an absolute overlay using flexbox.**
 
-#### Dynamic Contextual Metric
-Swap one card based on the mission phase:
-- Day 1: Upper-stage distance
-- Day 2: Burn delta-v / acceleration moment
-- Days 3–5: Radiation exposure
-- Day 6: Record distance marker / lunar proximity
-- Days 7–10: Reentry heat load
+```
+┌─────────────────────────────────────────────┐
+│ TelemetryStrip          MissionIdentity      │  ← Top bar
+├──────────┬──────────────────────┬────────────┤
+│          │                      │            │
+│ Hardware │     3D Scene         │  Event     │  ← Mid section
+│ Controls │                      │  Timeline  │
+│          │                      │            │
+├──────────┴──────────────────────┴────────────┤
+│              PhaseScrubber                   │  ← Bottom bar
+└─────────────────────────────────────────────┘
+```
 
-#### Remove or Avoid
-- Altitude in space
-- Dense engineering acronyms without explanation
-- Scientist-only labels as default UI copy
+#### `TelemetryStrip` (top-left)
+Four always-visible metrics in a horizontal row:
+- DIST. EARTH (km)
+- DIST. MOON (km, calculated as `384,400 − distanceFromEarth`)
+- VELOCITY (km/s)
+- PHASE (abbreviated: LAUNCH / TLI STAGE / T-CRUISE / FLYBY / ENTRY)
 
----
+#### `MissionIdentity` (top-center)
+- Mission name: `ARTEMIS II — INTEGRITY`
+- When at `LAST` index: pulsing red dot + phase label (LIVE state)
+- Otherwise: phase label | MET formatted as `T+Xd Xh Xm`
 
-### 6. Technical Requirements & WebGL Optimization
-These instructions are intended for AntiGravity or any AI coding assistant so the browser experience remains stable and visually strong.
+#### `HardwareControls` (left-mid)
+- PAN / ROTATE toggle buttons (active = white fill, black text)
+- Vertical zoom slider (drag-to-scrub, `ns-resize`, visual only)
+- SYNC TO SHIP button → sets `cameraMode: 'ship'`
+- 3D PERSPECTIVE / TOP-DOWN RADAR toggle → toggles `cameraMode`
 
-#### Trajectory Math
-- Use a continuous spline such as Three.js `CatmullRomCurve3`.
-- Interpolate ship position and rotation along the curve based on Mission Elapsed Time (MET).
-- Keep the path smooth and readable from both close and far zoom levels.
+#### `EventTimeline` (right-mid)
+Seven clickable mission events. Clicking jumps `currentMissionTime` to that index and pauses playback. Past events at full opacity, future at 30%. Current event marked with `▓` and white right-border.
 
-#### Scene Scale Management
-- Do **not** use true 1:1 astronomical scale.
-- Implement a proportional coordinate system, for example `1 unit = 1,000 km`.
-- Tune camera `near` and `far` clipping planes to avoid z-fighting and flicker.
+Events:
+- idx 0 — SLS LAUNCH / CORE JETTISON
+- idx 9 — TRANSLUNAR INJECTION BURN
+- idx 15 — T-COAST / PERIAPSIS PASS
+- idx 24 — LUNAR SOI ENTRY
+- idx 29 — LUNAR FLYBY / FREE RETURN
+- idx 40 — EARTH RETURN PHASE
+- idx 48 — REENTRY / SPLASHDOWN
 
-#### 3D Asset Optimization
-- Prefer `.glb` over `.stl` for final production if possible.
-- Compress geometry and textures using Draco and/or KTX2 where supported.
-- Keep polygon counts web-safe and mobile-conscious.
-- Reuse materials and avoid unnecessary draw calls.
-
-#### Earth, Moon, and Starfield
-- Earth and Moon should be simple optimized spheres with lightweight textures.
-- The starfield should be generated procedurally or with instanced points rather than heavy HDRI backgrounds.
-- Avoid giant asset downloads for environment rendering.
-
-#### State Management
-- Do not connect live APIs first.
-- Use local mock mission data and a global store such as Zustand for:
-  - `currentMissionTime`
-  - `currentPhase`
-  - `telemetry`
-  - `cameraMode`
-  - `isLive`
-
-#### Camera Controls
-- Support right-click pan.
-- Support zoom from ship-level detail to full Earth-Moon overview.
-- Add a **Center on Ship** action that recenters the camera target on Orion.
-- Add an **Overview** action that frames Earth, Moon, and the full trajectory.
+#### `PhaseScrubber` (bottom-center, max-width 60rem)
+- PLAY / PAUSE button (800 ms per step via `setInterval`)
+- Invisible `<input type="range">` overlaid on a custom track
+- White vertical thumb at current progress
+- Six phase tick marks (LAUNCH, TLI, TRANSIT, FLYBY, RETURN, REENTRY)
+- LIVE dot (pulsing red when at last index)
 
 ---
 
-### 7. UX Principles
-This experience is meant for PMs, founders, designers, and curious professionals.
+### 5. Telemetry Data
 
-- Use plain-English labels first, with technical terms as secondary context.
-- Let the visualization explain the scale and mission story.
-- Make the interface feel premium, calm, and cinematic.
-- Prioritize clarity over realism when the two conflict.
-- One screen should create an instant understanding of: where the spacecraft is, what phase it is in, and what happens next.
+**50 waypoints in `mockTrajectory.json`** spanning 2025-04-07 to 2025-04-17 (10 days, one point per ~4.8 hours).
+
+Each waypoint:
+```json
+{ "timestamp": "ISO8601", "x": km, "y": km, "z": km, "velocity": km/s, "distanceFromEarth": km }
+```
+
+Trajectory covers: LEO departure → TLI → deep space coast → lunar closest approach (~460,000 km apogee) → free return → reentry corridor.
+
+---
+
+### 6. State Management
+
+**Zustand store (`missionStore.ts`)**
+
+| Field | Type | Description |
+|---|---|---|
+| `currentMissionTime` | `number` | Current waypoint index (0–49) |
+| `isPlaying` | `boolean` | Playback active |
+| `trajectory` | `StateVector[]` | Full 50-point array |
+| `currentVector` | `StateVector` | Waypoint at current index |
+| `cameraMode` | `'ship' \| 'overview'` | Camera follow mode |
+| `controlMode` | `'pan' \| 'rotate'` | Active mouse mode (visual only) |
+| `zoomLevel` | `number` | 0–100 visual zoom indicator |
+
+---
+
+### 7. Technical Requirements & WebGL Notes
+
+- Camera `near: 0.1`, `far: 1000` (sufficient for 1 unit = 1,000 km scene; Moon at 384.4 units)
+- OrbitControls: `minDistance: 0.08`, `maxDistance: 250`
+- Stars: `radius 200`, `count 7000`, procedural via `@react-three/drei Stars`
+- No HDRI, no heavy textures — Earth/Moon are `meshPhongMaterial` colored spheres
+- Lighting: directional sun `(500, 200, 300)` intensity 2.8, ambient `0.12`, rim point light
+- `OrionModel` uses scratch `THREE.Vector3` refs to avoid GC pressure in `useFrame`
 
 ---
 
 ### 8. Success Criteria
+
 The dashboard succeeds if a non-space-professional can answer these questions within a few seconds:
 
 1. Where is Orion right now?
