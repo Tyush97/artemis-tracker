@@ -75,6 +75,22 @@ export default function HardwareControls() {
   const nudgeZoom = (delta: number) =>
     setZoomLevel(Math.max(0, Math.min(100, zoomLevel + delta)))
 
+  const nudgeStyle: React.CSSProperties = {
+    background: 'transparent',
+    border: '1px solid #444',
+    color: '#666',
+    width: '2.5rem',
+    height: '2.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    fontSize: '1rem',
+    lineHeight: 1,
+    padding: 0,
+    fontFamily: 'monospace',
+  }
+
   // Shared square icon button style
   const sq = (active: boolean): React.CSSProperties => ({
     background: active ? '#fff' : 'transparent',
@@ -89,23 +105,6 @@ export default function HardwareControls() {
     flexShrink: 0,
   })
 
-  // Nudge button (+ / −)
-  const nudgeStyle: React.CSSProperties = {
-    background: 'transparent',
-    border: '1px solid #444',
-    color: '#666',
-    width: '1.75rem',
-    height: '1.75rem',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    fontSize: '1rem',
-    lineHeight: 1,
-    padding: 0,
-    fontFamily: 'monospace',
-  }
-
   return (
     <div style={{
       display: 'flex',
@@ -115,20 +114,37 @@ export default function HardwareControls() {
       pointerEvents: 'auto',
     }}>
 
-      {/* Row 1: PAN + ROTATE */}
-      <div style={{ display: 'flex', gap: '0.375rem' }}>
-        <button title="Pan" onClick={() => setControlMode('pan')} style={sq(controlMode === 'pan')}>
-          <HandIcon color={controlMode === 'pan' ? '#000' : '#666'} />
-        </button>
-        <button title="Rotate / Orbit" onClick={() => setControlMode('rotate')} style={sq(controlMode === 'rotate')}>
-          <CursorIcon color={controlMode === 'rotate' ? '#000' : '#666'} />
-        </button>
-      </div>
+      {/* Single-column button stack */}
+      <button title="Pan" onClick={() => setControlMode('pan')} style={sq(controlMode === 'pan')}>
+        <HandIcon color={controlMode === 'pan' ? '#000' : '#666'} />
+      </button>
+      <button title="Rotate / Orbit" onClick={() => setControlMode('rotate')} style={sq(controlMode === 'rotate')}>
+        <CursorIcon color={controlMode === 'rotate' ? '#000' : '#666'} />
+      </button>
+      <button
+        title="Sync to Ship"
+        onClick={() => { setCameraMode('ship'); setControlMode('rotate'); }}
+        style={sq(cameraMode === 'ship')}
+      >
+        <TargetIcon color={cameraMode === 'ship' ? '#000' : '#666'} />
+      </button>
+      <button
+        title={cameraMode === 'overview' ? '3D Perspective' : 'Top-Down Radar'}
+        onClick={() => setCameraMode(cameraMode === 'overview' ? 'ship' : 'overview')}
+        style={sq(cameraMode === 'overview')}
+      >
+        {cameraMode === 'overview'
+          ? <CubeIcon color="#000" />
+          : <TopDownIcon color="#666" />
+        }
+      </button>
+
+      {/* Spacer */}
+      <div style={{ height: '0.5rem' }} />
 
       {/* Zoom slider */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.375rem', paddingLeft: '0.375rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.375rem' }}>
         <button onClick={() => nudgeZoom(10)} style={nudgeStyle}>+</button>
-
         <div
           ref={sliderRef}
           onPointerDown={handlePointerDown}
@@ -155,30 +171,7 @@ export default function HardwareControls() {
             pointerEvents: 'none',
           }} />
         </div>
-
         <button onClick={() => nudgeZoom(-10)} style={nudgeStyle}>−</button>
-      </div>
-
-      {/* Row 2: SYNC TO SHIP + PERSPECTIVE toggle */}
-      <div style={{ display: 'flex', gap: '0.375rem' }}>
-        <button
-          title="Sync to Ship"
-          onClick={() => { setCameraMode('ship'); setControlMode('rotate'); }}
-          style={sq(cameraMode === 'ship')}
-        >
-          <TargetIcon color={cameraMode === 'ship' ? '#000' : '#666'} />
-        </button>
-
-        <button
-          title={cameraMode === 'overview' ? '3D Perspective' : 'Top-Down Radar'}
-          onClick={() => setCameraMode(cameraMode === 'overview' ? 'ship' : 'overview')}
-          style={sq(cameraMode === 'overview')}
-        >
-          {cameraMode === 'overview'
-            ? <CubeIcon color="#000" />
-            : <TopDownIcon color="#666" />
-          }
-        </button>
       </div>
 
     </div>

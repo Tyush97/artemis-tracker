@@ -34,24 +34,47 @@ export default function PhaseScrubber() {
       pointerEvents: 'auto',
       zIndex: 10,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.875rem' }}>
-      
-        {/* Play/Pause Button */}
-        <button 
+      {/* JOURNEY label */}
+      <div style={{
+        fontSize: '0.5625rem',
+        color: '#555',
+        letterSpacing: '0.15rem',
+        textAlign: 'center',
+        marginBottom: '0.5rem',
+      }}>
+        JOURNEY
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+
+        {/* Play/Pause triangle icon */}
+        <button
           onClick={() => setIsPlaying(!isPlaying)}
           style={{
             background: 'transparent',
-            border: '1px solid #333',
+            border: 'none',
             color: '#fff',
-            padding: '0.5rem 1rem',
             cursor: 'pointer',
-            fontSize: '0.6875rem',
-            letterSpacing: '0.06rem',
-            minWidth: '5.625rem',
+            padding: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '1.5rem',
+            height: '1.5rem',
+            flexShrink: 0,
             outline: 'none',
           }}
         >
-          {isPlaying ? 'PAUSE' : 'PLAY'}
+          {isPlaying ? (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff">
+              <rect x="5" y="4" width="4" height="16" />
+              <rect x="15" y="4" width="4" height="16" />
+            </svg>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinejoin="round">
+              <polygon points="6,4 20,12 6,20" />
+            </svg>
+          )}
         </button>
 
         <div style={{ flex: 1, position: 'relative', height: '3.75rem', display: 'flex', alignItems: 'center' }}>

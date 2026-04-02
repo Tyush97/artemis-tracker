@@ -1,17 +1,44 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMissionStore } from '../../store/missionStore'
+import trajectory from '../../data/mockTrajectory.json'
 
 const EVENTS = [
-  { idx: 0,  label: 'SLS LAUNCH / CORE JETTISON' },
-  { idx: 9,  label: 'TRANSLUNAR INJECTION BURN' },
-  { idx: 15, label: 'T-COAST / PERIAPSIS PASS' },
-  { idx: 24, label: 'LUNAR SOI ENTRY' },
-  { idx: 29, label: 'LUNAR FLYBY / FREE RETURN' },
-  { idx: 40, label: 'EARTH RETURN PHASE' },
-  { idx: 48, label: 'REENTRY / SPLASHDOWN' },
+  {
+    idx: 0,
+    label: 'SLS LIFTOFF',
+    detail: 'All engines nominal. Orion clears the tower. First crewed SLS launch. Core stage separation in ~2 min.',
+  },
+  {
+    idx: 9,
+    label: 'TRANSLUNAR INJECTION',
+    detail: 'ICPS upper stage burns for 18 min, pushing Orion to 10.4 km/s. Crew are now leaving Earth orbit — first humans to do so since Apollo 17.',
+  },
+  {
+    idx: 15,
+    label: 'OUTBOUND COAST',
+    detail: 'Coasting at ~8,000 km/h. Crew completing systems checks and health assessments. First live broadcasts from deep space.',
+  },
+  {
+    idx: 24,
+    label: 'LUNAR SPHERE OF INFLUENCE',
+    detail: 'Moon\'s gravity now dominates over Earth\'s. Orion accelerating without engine burn. Closest the crew has been to another world.',
+  },
+  {
+    idx: 29,
+    label: 'LUNAR FLYBY',
+    detail: 'Orion skims ~8,900 km above the surface — closer than any crewed spacecraft since Apollo. No orbit insertion. Free-return trajectory confirmed.',
+  },
+  {
+    idx: 40,
+    label: 'RETURN COAST',
+    detail: 'Homeward bound. Service module provides minor correction burn. Crew rest period. ~4 days to reentry corridor.',
+  },
+  {
+    idx: 48,
+    label: 'REENTRY & SPLASHDOWN',
+    detail: 'CM separates. 11 min reentry at Mach 32. Drogue and main chutes deploy. Splashdown in the Pacific. Artemis II complete.',
+  },
 ]
-
-import trajectory from '../../data/mockTrajectory.json'
 
 function getMet(trajectoryIdx: number): string {
   const t = new Date(trajectory[trajectoryIdx].timestamp)
@@ -20,33 +47,36 @@ function getMet(trajectoryIdx: number): string {
   const days  = Math.floor(diff / (1000 * 60 * 60 * 24))
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
   const mins  = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-  return `T+${days}d ${hours}h ${mins}m`
+  return `T+${days}d ${String(hours).padStart(2,'0')}h ${String(mins).padStart(2,'0')}m`
 }
 
 export default function EventTimeline() {
   const { currentMissionTime, setMissionTime, setIsPlaying } = useMissionStore()
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Past events, most recent first
-  const pastEvents = [...EVENTS]
-    .filter(ev => currentMissionTime >= ev.idx)
-    .reverse()
+  // Track the highest scrubber position ever reached so the list never shrinks
+  const [peakTime, setPeakTime] = useState(currentMissionTime)
+  useEffect(() => {
+    if (currentMissionTime > peakTime) setPeakTime(currentMissionTime)
+  }, [currentMissionTime])
 
-  // Future events, soonest first
-  const futureEvents = [...EVENTS]
-    .filter(ev => currentMissionTime < ev.idx)
+  // Events unlocked by the peak — most recent first
+  const visibleEvents = [...EVENTS].filter(ev => peakTime >= ev.idx).reverse()
+
+  // The most recent event at or before the current scrubber position
+  const passed = EVENTS.filter(ev => currentMissionTime >= ev.idx)
+  const activeIdx = passed.length > 0 ? passed[passed.length - 1].idx : -1
 
   const handleClick = (idx: number) => {
     setIsPlaying(false)
     setMissionTime(idx)
   }
 
-  // Scroll to top whenever the current event changes
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' })
     }
-  }, [currentMissionTime])
+  }, [activeIdx])
 
   return (
     <div style={{
@@ -54,32 +84,25 @@ export default function EventTimeline() {
       flexDirection: 'column',
       fontFamily: 'monospace',
       pointerEvents: 'auto',
-      width: '15rem',
-      // Fill from top all the way to near-bottom
+      width: '16rem',
       alignSelf: 'flex-start',
       height: '100%',
     }}>
       {/* Header */}
       <div style={{
-        fontSize: '0.5625rem',
-        color: '#555',
-        letterSpacing: '0.15rem',
+        fontSize: '0.5rem',
+        color: '#444',
+        letterSpacing: '0.18rem',
         textAlign: 'right',
-        paddingBottom: '0.75rem',
-        borderBottom: '1px solid #222',
+        paddingBottom: '0.625rem',
+        borderBottom: '1px solid #1a1a1a',
         marginBottom: '0.75rem',
         flexShrink: 0,
       }}>
-        MISSION TIMELINE
+        LIVE UPDATES
       </div>
 
-      {/* Scrollable feed with bottom mask */}
-      <div style={{
-        position: 'relative',
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden',
-      }}>
+      <div style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <div
           ref={scrollRef}
           style={{
@@ -88,111 +111,84 @@ export default function EventTimeline() {
             scrollbarWidth: 'none',
             display: 'flex',
             flexDirection: 'column',
-            gap: '1.25rem',
-            paddingBottom: '4rem',
+            gap: '0',
+            paddingBottom: '5rem',
           }}
         >
-          {/* Past events — top of feed (most recent at top) */}
-          {pastEvents.map((ev, i) => {
-            const isCurrent = i === 0
+          {visibleEvents.map((ev, i) => {
+            const isCurrent = ev.idx === activeIdx
+            const isLatest = i === 0
             return (
               <div
                 key={ev.idx}
                 onClick={() => handleClick(ev.idx)}
                 style={{
-                  textAlign: 'right',
                   cursor: 'pointer',
+                  paddingBottom: '1rem',
+                  marginBottom: '1rem',
+                  borderBottom: '1px solid #141414',
+                  opacity: isCurrent ? 1 : 0.45,
                   transition: 'opacity 0.3s',
-                  opacity: isCurrent ? 1 : 0.55,
                 }}
               >
+                {/* Timestamp row */}
                 <div style={{
-                  fontSize: '0.5625rem',
-                  color: '#888',
-                  marginBottom: '0.3rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'flex-end',
                   gap: '0.4rem',
+                  marginBottom: '0.3rem',
                 }}>
-                  {isCurrent && (
+                  {isLatest && (
                     <span style={{
-                      display: 'inline-block',
-                      width: '0.4rem',
-                      height: '0.4rem',
+                      width: '0.35rem', height: '0.35rem',
                       backgroundColor: '#ff3333',
                       borderRadius: '50%',
                       animation: 'pulse 1s infinite',
                       flexShrink: 0,
                     }} />
                   )}
-                  {getMet(ev.idx)}
+                  <span style={{ fontSize: '0.5rem', color: '#666', letterSpacing: '0.08rem' }}>
+                    {getMet(ev.idx)}
+                  </span>
                 </div>
+
+                {/* Headline */}
                 <div style={{
-                  fontSize: '0.6875rem',
+                  fontSize: '0.625rem',
                   color: isCurrent ? '#fff' : '#aaa',
-                  letterSpacing: '0.05rem',
-                  borderRight: isCurrent ? '2px solid #fff' : '1px solid #333',
+                  letterSpacing: '0.1rem',
+                  fontWeight: isCurrent ? 700 : 400,
+                  textAlign: 'right',
+                  borderRight: isCurrent ? '2px solid #fff' : '1px solid #2a2a2a',
                   paddingRight: '0.75rem',
-                  lineHeight: '1.4',
+                  marginBottom: '0.4rem',
+                  lineHeight: '1.3',
                 }}>
                   {ev.label}
                 </div>
+
+                {/* Detail blurb — only show for current and 1 back */}
+                {i < 2 && (
+                  <div style={{
+                    fontSize: '0.5625rem',
+                    color: isCurrent ? '#888' : '#444',
+                    lineHeight: '1.6',
+                    textAlign: 'right',
+                    paddingRight: '0.75rem',
+                  }}>
+                    {ev.detail}
+                  </div>
+                )}
               </div>
             )
           })}
-
-          {/* Divider between past and upcoming */}
-          {pastEvents.length > 0 && futureEvents.length > 0 && (
-            <div style={{
-              borderTop: '1px solid #222',
-              paddingTop: '0.75rem',
-              fontSize: '0.5rem',
-              color: '#444',
-              letterSpacing: '0.15rem',
-              textAlign: 'right',
-            }}>
-              UPCOMING
-            </div>
-          )}
-
-          {/* Future events */}
-          {futureEvents.map((ev) => (
-            <div
-              key={ev.idx}
-              onClick={() => handleClick(ev.idx)}
-              style={{
-                textAlign: 'right',
-                cursor: 'pointer',
-                opacity: 0.28,
-                transition: 'opacity 0.3s',
-              }}
-            >
-              <div style={{ fontSize: '0.5625rem', color: '#888', marginBottom: '0.3rem' }}>
-                {getMet(ev.idx)}
-              </div>
-              <div style={{
-                fontSize: '0.6875rem',
-                color: '#ccc',
-                letterSpacing: '0.05rem',
-                borderRight: '1px solid #333',
-                paddingRight: '0.75rem',
-                lineHeight: '1.4',
-              }}>
-                {ev.label}
-              </div>
-            </div>
-          ))}
         </div>
 
-        {/* Bottom fade-out gradient */}
+        {/* Bottom fade */}
         <div style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '7rem',
-          background: 'linear-gradient(to bottom, transparent, #000000)',
+          position: 'absolute', bottom: 0, left: 0, right: 0, height: '6rem',
+          background: 'linear-gradient(to bottom, transparent, #000)',
           pointerEvents: 'none',
         }} />
       </div>
