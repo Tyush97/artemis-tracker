@@ -11,10 +11,16 @@ import {
 
 const CURVE_PTS = missionCurve.getPoints(300)
 
-const SHIP_OFFSET = new THREE.Vector3(2, 2, 2)
 // Centroid of the real EME2000 trajectory in scene XZ (midpoint Earth→flyby):
 // flyby scene coords ≈ (-131.9, -188.6, 343.1) → XZ centre ≈ (-64, 0, 170)
-const TOP_DOWN_TGT = new THREE.Vector3(-64, 0, 170)
+const TRAJ_CENTER = new THREE.Vector3(-64, 0, 170)
+// 3D perspective: angled view looking down at trajectory from behind/above
+const PERSP_CAM_POS = new THREE.Vector3(300, 200, 900)
+// Top-down: directly above trajectory center
+const TOPDOWN_CAM_POS = new THREE.Vector3(TRAJ_CENTER.x, 900, TRAJ_CENTER.z)
+// Ship follow: units behind along travel direction, and up
+const SHIP_BACK_DIST = 12   // scene units behind ship
+const SHIP_UP_OFFSET = 3    // scene units above ship
 
 function RangeRings() {
   const ringsData = [
@@ -111,11 +117,10 @@ type ControlsRef = React.MutableRefObject<{
 const ZOOM_MIN_DIST = 5
 const ZOOM_MAX_DIST = 1400
 
-function CameraController({ controlsRef }: { controlsRef: ControlsRef }) {
+function CameraController({ controlsRef, animatingRef }: { controlsRef: ControlsRef; animatingRef: React.MutableRefObject<boolean> }) {
   const { camera } = useThree()
   const shipPos = useRef(new THREE.Vector3())
   const prevMode = useRef('')
-  const settled = useRef(false)
   const prevZoom = useRef(-1)
 
   useFrame((_, delta) => {
@@ -125,76 +130,71 @@ function CameraController({ controlsRef }: { controlsRef: ControlsRef }) {
     const t = currentMissionTime / LAST
     missionCurve.getPoint(t, shipPos.current)
 
-    // ── Mode transition ────────────────────────────────
+    // ── Mode transition: kick off animation ───────────
     if (cameraMode !== prevMode.current) {
       prevMode.current = cameraMode
-      settled.current = false
+      animatingRef.current = true
+      if (cameraMode !== 'topdown') camera.up.set(0, 1, 0)
     }
 
-    // ── Ship mode ──────────────────────────────────────
+    // ── Transition animation (topdown / perspective) ───
+    if (animatingRef.current && (cameraMode === 'topdown' || cameraMode === 'perspective')) {
+      const targetPos = cameraMode === 'topdown' ? TOPDOWN_CAM_POS : PERSP_CAM_POS
+      if (cameraMode === 'topdown') camera.up.set(0, 0, -1)
+
+      const alpha = 1 - Math.pow(0.005, delta)
+      camera.position.lerp(targetPos, alpha)
+      controlsRef.current.target.lerp(TRAJ_CENTER, alpha)
+      controlsRef.current.update()
+
+      if (camera.position.distanceTo(targetPos) < 2 && controlsRef.current.target.distanceTo(TRAJ_CENTER) < 2) {
+        camera.position.copy(targetPos)
+        controlsRef.current.target.copy(TRAJ_CENTER)
+        controlsRef.current.update()
+        animatingRef.current = false
+        prevZoom.current = zoomLevel
+      }
+      return // don't touch zoom while animating
+    }
+
+    // ── Ship mode: animate in then follow ─────────────
     if (cameraMode === 'ship') {
-      // Transition: fly camera toward the ship on mode entry
-      if (!settled.current) {
-        const spd = delta * 3
-        const targetCamPos = shipPos.current.clone().add(SHIP_OFFSET)
-        camera.position.lerp(targetCamPos, spd)
-        controlsRef.current.target.lerp(shipPos.current, spd)
-        if (
-          camera.position.distanceTo(targetCamPos) < 2 &&
-          controlsRef.current.target.distanceTo(shipPos.current) < 2
-        ) {
-          settled.current = true
+      const tangent = missionCurve.getTangent(t).normalize()
+      const up = new THREE.Vector3(0, 1, 0)
+      const targetCamPos = shipPos.current.clone()
+        .addScaledVector(tangent, -SHIP_BACK_DIST)
+        .addScaledVector(up, SHIP_UP_OFFSET)
+      if (animatingRef.current) {
+        const alpha = 1 - Math.pow(0.005, delta)
+        camera.position.lerp(targetCamPos, alpha)
+        controlsRef.current.target.lerp(shipPos.current, alpha)
+        controlsRef.current.update()
+        if (camera.position.distanceTo(targetCamPos) < 2) {
+          animatingRef.current = false
         }
       } else {
-        // Keep the orbit pivot on the ship; translate camera by the same delta
-        // so the user's view angle and distance are preserved while following.
         const prevTarget = controlsRef.current.target.clone()
-        const spd = Math.min(delta * 4, 0.15)
-        controlsRef.current.target.lerp(shipPos.current, spd)
-        const targetDelta = controlsRef.current.target.clone().sub(prevTarget)
-        camera.position.add(targetDelta)
+        controlsRef.current.target.lerp(shipPos.current, Math.min(delta * 4, 0.15))
+        const d = controlsRef.current.target.clone().sub(prevTarget)
+        camera.position.add(d)
         controlsRef.current.update()
       }
+      return
     }
 
-    // ── Overview mode ──────────────────────────────────
-    if (cameraMode === 'overview') {
-      if (!settled.current) {
-        const height = ZOOM_MAX_DIST - (zoomLevel / 100) * (ZOOM_MAX_DIST - ZOOM_MIN_DIST)
-        const overviewCamPos = new THREE.Vector3(-64, height, -30)
-
-        camera.position.lerp(overviewCamPos, delta * 2)
-        controlsRef.current.target.lerp(TOP_DOWN_TGT, delta * 2)
-
-        if (
-          camera.position.distanceTo(overviewCamPos) < 2 &&
-          controlsRef.current.target.distanceTo(TOP_DOWN_TGT) < 2
-        ) {
-          settled.current = true
-          prevZoom.current = zoomLevel
-        }
-      }
-    }
-
-    // ── Zoom Logic ─────────────────────────────────────
-    // IMPORTANT: Only sync zoom when 'settled'. 
-    // If we sync during a lerp, the changing distance updates the store's zoomLevel,
-    // which in turn updates overviewCamPos, causing a feedback loop where the 
-    // camera chases a moving target (the "zooming out" bug).
-    if (settled.current) {
+    // ── Zoom sync (topdown / perspective, after settled) ──
+    if (!animatingRef.current) {
       if (zoomLevel !== prevZoom.current) {
         prevZoom.current = zoomLevel
         const target = controlsRef.current.target
         const dir = camera.position.clone().sub(target)
-        const currentDist = dir.length()
-        if (currentDist > 0.01) {
+        if (dir.length() > 0.01) {
           dir.normalize()
           const desiredDist = ZOOM_MAX_DIST - (zoomLevel / 100) * (ZOOM_MAX_DIST - ZOOM_MIN_DIST)
           camera.position.copy(target).addScaledVector(dir, desiredDist)
-          controlsRef.current.update() // Update controls after manual position change
+          controlsRef.current.update()
         }
       } else {
-        // ── Sync scroll/dolly back to slider ──────────────────────────
         const dist = camera.position.distanceTo(controlsRef.current.target)
         const synced = Math.round((1 - (dist - ZOOM_MIN_DIST) / (ZOOM_MAX_DIST - ZOOM_MIN_DIST)) * 100)
         const clamped = Math.max(0, Math.min(100, synced))
@@ -203,9 +203,6 @@ function CameraController({ controlsRef }: { controlsRef: ControlsRef }) {
           setZoomLevel(clamped)
         }
       }
-    } else {
-      // While lerping, keep prevZoom in sync so there's no jump when we settle
-      prevZoom.current = zoomLevel
     }
   })
 
@@ -214,13 +211,45 @@ function CameraController({ controlsRef }: { controlsRef: ControlsRef }) {
 
 export default function SceneCanvas() {
   const controlsRef = useRef<{ target: THREE.Vector3; update: () => void } | null>(null)
-  const { controlMode } = useMissionStore()
+  const animatingRef = useRef(false)
+  const { controlMode, cameraMode, setCameraMode } = useMissionStore()
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null)
 
   const cursorStyle = controlMode === 'pan' ? 'grab' : 'auto'
 
+  const handlePointerDown = (e: React.PointerEvent) => {
+    // Abort any in-progress transition so the camera doesn't snap back
+    if (animatingRef.current) {
+      animatingRef.current = false
+    }
+    dragStartPos.current = { x: e.clientX, y: e.clientY }
+  }
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!dragStartPos.current) return
+    // Only switch topdown→perspective on rotate drag, not pan
+    if (useMissionStore.getState().controlMode !== 'rotate') return
+    const dx = e.clientX - dragStartPos.current.x
+    const dy = e.clientY - dragStartPos.current.y
+    if (Math.sqrt(dx * dx + dy * dy) > 8 && useMissionStore.getState().cameraMode === 'topdown') {
+      setCameraMode('perspective')
+      dragStartPos.current = null
+    }
+  }
+
+  const handlePointerUp = () => {
+    dragStartPos.current = null
+  }
+
+  // Suppress unused warning — cameraMode read for reactivity
+  void cameraMode
+
   return (
     <Canvas
-      camera={{ position: [-64, 800, -30], fov: 45, near: 0.1, far: 5000 }}
+      camera={{ position: [200, 500, 600], fov: 45, near: 0.1, far: 5000 }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
       style={{ position: 'absolute', inset: 0, background: '#000', cursor: cursorStyle, zIndex: 0 }}
     >
@@ -233,7 +262,7 @@ export default function SceneCanvas() {
         <OrionModel />
       </Suspense>
 
-      <CameraController controlsRef={controlsRef} />
+      <CameraController controlsRef={controlsRef} animatingRef={animatingRef} />
       <OrbitControls
         ref={controlsRef as React.MutableRefObject<any>}
         enablePan

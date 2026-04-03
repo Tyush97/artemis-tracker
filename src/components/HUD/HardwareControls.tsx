@@ -129,14 +129,18 @@ export default function HardwareControls() {
         <TargetIcon color={cameraMode === 'ship' ? '#000' : '#666'} />
       </button>
       <button
-        title={cameraMode === 'overview' ? '3D Perspective' : 'Top-Down Radar'}
-        onClick={() => setCameraMode(cameraMode === 'overview' ? 'ship' : 'overview')}
-        style={sq(cameraMode === 'overview')}
+        title="Top-Down View"
+        onClick={() => setCameraMode('topdown')}
+        style={sq(cameraMode === 'topdown')}
       >
-        {cameraMode === 'overview'
-          ? <CubeIcon color="#000" />
-          : <TopDownIcon color="#666" />
-        }
+        <TopDownIcon color={cameraMode === 'topdown' ? '#000' : '#666'} />
+      </button>
+      <button
+        title="3D Perspective"
+        onClick={() => setCameraMode('perspective')}
+        style={sq(cameraMode === 'perspective')}
+      >
+        <CubeIcon color={cameraMode === 'perspective' ? '#000' : '#666'} />
       </button>
 
       {/* Spacer */}

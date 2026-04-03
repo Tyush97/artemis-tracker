@@ -78,11 +78,18 @@ export default function MissionHeader() {
           ⊙ Ship
         </button>
         <button
-          style={cameraMode === 'overview' ? active : inactive}
-          onClick={() => setCameraMode('overview')}
-          aria-pressed={cameraMode === 'overview'}
+          style={cameraMode === 'topdown' ? active : inactive}
+          onClick={() => setCameraMode('topdown')}
+          aria-pressed={cameraMode === 'topdown'}
         >
-          ◈ Overview
+          ◈ Top-Down
+        </button>
+        <button
+          style={cameraMode === 'perspective' ? active : inactive}
+          onClick={() => setCameraMode('perspective')}
+          aria-pressed={cameraMode === 'perspective'}
+        >
+          ◈ 3D
         </button>
       </div>
 

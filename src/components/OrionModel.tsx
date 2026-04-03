@@ -152,7 +152,7 @@ export default function OrionModel() {
   }), [])
 
   const outlineMat = useMemo(() => new THREE.ShaderMaterial({
-    uniforms: { outlineThickness: { value: 0.02 } }, // Added some thickness
+    uniforms: { outlineThickness: { value: 0 } }, // Added some thickness
     vertexShader: outlineVertexShader,
     fragmentShader: outlineFragmentShader,
     side: THREE.BackSide,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import trajectory from '../../data/trajectory.json'
 
-const LAUNCH_MS = new Date(trajectory[0].timestamp).getTime()
+const LAUNCH_MS = new Date(trajectory[0].timestamp + 'Z').getTime()
 
 export default function MissionElapsed() {
   const [now, setNow] = useState(() => new Date())

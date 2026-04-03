@@ -33,7 +33,7 @@ interface MissionState {
   actualTrajectory: StateVector[]       // flown arc from HORIZONS (history mode)
   actualCurrentVector: StateVector | null  // latest HORIZONS state vector
 
-  cameraMode: 'ship' | 'overview'
+  cameraMode: 'topdown' | 'perspective' | 'ship'
 
   // HUD interaction states
   controlMode: 'pan' | 'rotate'
@@ -42,7 +42,7 @@ interface MissionState {
   setMissionTime:  (index: number) => void
   setIsPlaying:    (playing: boolean) => void
   tick:            () => void
-  setCameraMode:   (mode: 'ship' | 'overview') => void
+  setCameraMode:   (mode: 'topdown' | 'perspective' | 'ship') => void
   setControlMode:  (mode: 'pan' | 'rotate') => void
   setZoomLevel:    (level: number) => void
   setTelemetry:    (data: TelemetryData) => void
@@ -61,7 +61,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   currentVector:      trajectory[0],
   actualTrajectory:        [],
   actualCurrentVector:     null,
-  cameraMode:         'overview',
+  cameraMode:         'perspective',
   controlMode:        'rotate',
   zoomLevel:          50,
 
@@ -119,8 +119,8 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   getRealTimeIndex: () => {
     const traj = get().trajectory
     const now = Date.now()
-    const start = new Date(traj[0].timestamp).getTime()
-    const end   = new Date(traj[traj.length - 1].timestamp).getTime()
+    const start = new Date(traj[0].timestamp + 'Z').getTime()
+    const end   = new Date(traj[traj.length - 1].timestamp + 'Z').getTime()
     if (now <= start) return 0
     if (now >= end)   return traj.length - 1
     
@@ -128,7 +128,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     let lo = 0, hi = traj.length - 1
     while (lo < hi) {
       const mid = (lo + hi) >> 1
-      if (new Date(traj[mid].timestamp).getTime() < now) lo = mid + 1
+      if (new Date(traj[mid].timestamp + 'Z').getTime() < now) lo = mid + 1
       else hi = mid
     }
     return lo
