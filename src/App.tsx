@@ -16,7 +16,7 @@ function syncToRealTime() {
   const now = Date.now()
   // Mission hasn't started yet — stay at index 0
   const missionStart = new Date(traj[0].timestamp).getTime()
-  const missionEnd   = new Date(traj[traj.length - 1].timestamp).getTime()
+  const missionEnd = new Date(traj[traj.length - 1].timestamp).getTime()
   if (now < missionStart) return
   if (now > missionEnd) {
     useMissionStore.getState().setMissionTime(traj.length - 1)
@@ -98,7 +98,7 @@ export default function App() {
         {/* TOP BAR — 3-column so MissionIdentity is at true center */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 3fr 1fr',
+          gridTemplateColumns: '1fr 2.5fr 1fr',
           alignItems: 'flex-start',
           width: '100%',
           marginBottom: '0.625rem'

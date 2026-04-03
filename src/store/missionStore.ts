@@ -32,6 +32,7 @@ interface MissionState {
   // HORIZONS live data — null until first fetch succeeds
   actualTrajectory: StateVector[]       // flown arc from HORIZONS (history mode)
   actualCurrentVector: StateVector | null  // latest HORIZONS state vector
+  lastHorizonsUpdate: Date | null       // wall-clock time of last successful HORIZONS current poll
 
   cameraMode: 'topdown' | 'perspective' | 'ship'
 
@@ -61,6 +62,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   currentVector:      trajectory[0],
   actualTrajectory:        [],
   actualCurrentVector:     null,
+  lastHorizonsUpdate:      null,
   cameraMode:         'perspective',
   controlMode:        'rotate',
   zoomLevel:          50,
@@ -114,7 +116,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   setZoomLevel: (level) => set({ zoomLevel: level }),
   setTelemetry: (data) => set({ telemetry: data }),
   setActualTrajectory: (vecs) => set({ actualTrajectory: vecs }),
-  setActualCurrentVector: (vec) => set({ actualCurrentVector: vec }),
+  setActualCurrentVector: (vec) => set({ actualCurrentVector: vec, lastHorizonsUpdate: new Date() }),
 
   getRealTimeIndex: () => {
     const traj = get().trajectory

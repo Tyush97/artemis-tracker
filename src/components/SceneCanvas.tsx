@@ -1,6 +1,6 @@
-import { Suspense, useMemo, useRef } from 'react'
+import { Suspense, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, Line, Text } from '@react-three/drei'
+import { OrbitControls, Line, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { useMissionStore } from '../store/missionStore'
 import OrionModel from './OrionModel'
@@ -10,6 +10,23 @@ import {
 } from '../data/missionCurve'
 
 const CURVE_PTS = missionCurve.getPoints(300)
+
+// Compute orbital plane: use two well-separated arc positions and cross them.
+// CURVE_PTS[30] = early arc, CURVE_PTS[220] = approaching flyby.
+const _op1 = CURVE_PTS[30].clone()
+const _op2 = CURVE_PTS[220].clone()
+const ORBITAL_NORMAL = new THREE.Vector3().crossVectors(_op1, _op2).normalize()
+if (ORBITAL_NORMAL.y < 0) ORBITAL_NORMAL.negate()
+// Quaternion that rotates the ring group's local Y-up into the orbital plane normal
+const ORBITAL_PLANE_QUAT = new THREE.Quaternion().setFromUnitVectors(
+  new THREE.Vector3(0, 1, 0),
+  ORBITAL_NORMAL,
+)
+
+// Direction toward the Moon in the ring group's local space (for label placement)
+// Project Moon world position into local space, flatten to XZ, normalize
+const _moonLocal = MOON_POS.clone().applyQuaternion(ORBITAL_PLANE_QUAT.clone().invert())
+const LABEL_DIR = new THREE.Vector3(_moonLocal.x, 0, _moonLocal.z).normalize()
 
 // Centroid of the real EME2000 trajectory in scene XZ (midpoint Earth→flyby):
 // flyby scene coords ≈ (-131.9, -188.6, 343.1) → XZ centre ≈ (-64, 0, 170)
@@ -22,71 +39,214 @@ const TOPDOWN_CAM_POS = new THREE.Vector3(TRAJ_CENTER.x, 900, TRAJ_CENTER.z)
 const SHIP_BACK_DIST = 12   // scene units behind ship
 const SHIP_UP_OFFSET = 3    // scene units above ship
 
+// Sun: ~2000 scene units away, roughly April 2026 solar direction in scene space
+// (EME2000 +X ≈ vernal equinox; scene X = EME X, scene Y = EME Z, scene Z = -EME Y)
+const SUN_POS = new THREE.Vector3(3000, 600, -1000)
+
+// Seeded pseudo-random so stars are stable across renders
+function seededRand(seed: number) {
+  const x = Math.sin(seed + 1) * 43758.5453123
+  return x - Math.floor(x)
+}
+
+function Starfield() {
+  const ref = useRef<THREE.Points>(null)
+  const { camera } = useThree()
+
+  const COUNT = 2000
+  const positions = useMemo(() => {
+    const arr = new Float32Array(COUNT * 3)
+    for (let i = 0; i < COUNT; i++) {
+      const r = 4500 + seededRand(i * 3) * 500
+      const theta = seededRand(i * 3 + 1) * Math.PI * 2
+      const phi   = Math.acos(2 * seededRand(i * 3 + 2) - 1)
+      arr[i * 3]     = r * Math.sin(phi) * Math.cos(theta)
+      arr[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
+      arr[i * 3 + 2] = r * Math.cos(phi)
+    }
+    return arr
+  }, [])
+
+  // Lock starfield to camera position so it never moves — only rotation affects it
+  useFrame(() => {
+    if (ref.current) ref.current.position.copy(camera.position)
+  })
+
+  return (
+    <points ref={ref}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+      </bufferGeometry>
+      <pointsMaterial color="#888888" size={1.8} sizeAttenuation={false} transparent opacity={0.6} depthWrite={false} />
+    </points>
+  )
+}
+
+const RING_INFO: Record<string, { dist: string; desc: string }> = {
+  'LEO BOUNDARY':     { dist: '~2,000 km',    desc: 'Upper edge of Low Earth Orbit. Most satellites and the ISS operate below this altitude.' },
+  'VAN ALLEN BELTS':  { dist: '~60,000 km',   desc: 'Radiation belts of high-energy particles trapped by Earth\'s magnetic field. Artemis II passes through rapidly.' },
+  'LUNAR SOI':        { dist: '~318,000 km',  desc: 'Sphere of Influence where the Moon\'s gravity dominates over Earth\'s. Artemis II enters lunar space here.' },
+  'MOON ORBIT':       { dist: '~413,200 km',  desc: 'Position of the Moon during the Artemis II flyby. The Moon\'s elliptical orbit ranges from ~356,500 km (perigee) to ~406,700 km (apogee) — it sits further out on this date.' },
+  'APOLLO 13 RECORD': { dist: '~400,171 km',  desc: 'Farthest distance from Earth ever reached by humans, set during Apollo 13\'s emergency free-return trajectory in April 1970. Apollo 17 landed on the surface at ~384,400 km.' },
+}
+
 function RangeRings() {
+  const [hovered, setHovered] = useState<string | null>(null)
+
+  // Moon distance at Artemis II flyby — ring matches the Moon sphere exactly
+  const MOON_DIST = MOON_POS.length()
   const ringsData = [
     { r: EARTH_R + 2.0, label: 'LEO BOUNDARY' },
-    { r: 60.0, label: 'VAN ALLEN BELTS' },
-    { r: 318.0, label: 'LUNAR SOI' },
-    { r: 384.4, label: 'MOON ORBIT' },
-    { r: 400.17, label: 'APOLLO 13 RECORD' },
+    { r: 60.0,          label: 'VAN ALLEN BELTS' },
+    { r: 318.0,         label: 'LUNAR SOI' },
+    { r: 400.17,        label: 'APOLLO 13 RECORD' },
+    { r: MOON_DIST,     label: 'MOON ORBIT' },
   ]
 
   const pointsForRadius = (r: number) => {
     const pts: THREE.Vector3[] = []
     for (let i = 0; i <= 128; i++) {
-        const theta = (i / 128) * Math.PI * 2
-        pts.push(new THREE.Vector3(Math.cos(theta) * r, 0, Math.sin(theta) * r))
+      const theta = (i / 128) * Math.PI * 2
+      pts.push(new THREE.Vector3(Math.cos(theta) * r, 0, Math.sin(theta) * r))
     }
     return pts
   }
 
   return (
-    <group>
-      {ringsData.map(({ r, label }, i) => (
-        <group key={i}>
-          <Line 
-            points={pointsForRadius(r)} 
-            color="#555555" 
-            lineWidth={1} 
-            dashed 
-            dashSize={r > 50 ? 5 : 1} 
-            gapSize={r > 50 ? 5 : 1}
-            opacity={0.4}
-            transparent
-          />
-          <Text 
-            position={[0, 0, -r]} 
-            rotation={[-Math.PI / 2, 0, 0]} 
-            fontSize={r > 50 ? 5 : 1.5} 
-            color="#666666" 
-            anchorX="center" 
-            anchorY="bottom"
-          >
-            {label}
-          </Text>
-        </group>
-      ))}
+    <group quaternion={ORBITAL_PLANE_QUAT}>
+      {ringsData.map(({ r, label }) => {
+        const isHovered = hovered === label
+        const info = RING_INFO[label]
+        return (
+          <group key={label}>
+            <Line
+              points={pointsForRadius(r)}
+              color={isHovered ? '#aaaaaa' : '#555555'}
+              lineWidth={isHovered ? 1.5 : 1}
+              dashed
+              dashSize={r > 50 ? 5 : 1}
+              gapSize={r > 50 ? 5 : 1}
+              opacity={isHovered ? 0.7 : 0.4}
+              transparent
+            />
+            <Html
+              position={[LABEL_DIR.x * r, 0, LABEL_DIR.z * r]}
+              center
+              zIndexRange={[100, 100]}
+              style={{ pointerEvents: 'auto' }}
+            >
+              <div
+                onMouseEnter={() => setHovered(label)}
+                onMouseLeave={() => setHovered(null)}
+                style={{ position: 'relative', cursor: 'default' }}
+              >
+                {/* Label */}
+                <span style={{
+                  fontFamily: 'monospace',
+                  fontSize: '9px',
+                  fontWeight: 400,
+                  lineHeight: '1',
+                  color: isHovered ? '#cccccc' : '#555555',
+                  whiteSpace: 'nowrap',
+                  userSelect: 'none',
+                  letterSpacing: '0.1em',
+                  transition: 'color 0.15s',
+                }}>
+                  {label}
+                </span>
+
+                {/* Info card */}
+                {isHovered && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '18px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '200px',
+                    background: 'rgba(0,0,0,0.85)',
+                    border: '1px solid #333',
+                    padding: '8px 10px',
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}>
+                    <div style={{ fontFamily: 'monospace', fontSize: '8px', color: '#888', letterSpacing: '0.12em', marginBottom: '4px' }}>
+                      {label}
+                    </div>
+                    <div style={{ fontFamily: 'monospace', fontSize: '10px', color: '#ffffff', marginBottom: '5px', letterSpacing: '0.04em' }}>
+                      {info.dist}
+                    </div>
+                    <div style={{ fontFamily: 'monospace', fontSize: '8px', color: '#777', lineHeight: '1.5', letterSpacing: '0.03em' }}>
+                      {info.desc}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Html>
+          </group>
+        )
+      })}
       <Line points={[new THREE.Vector3(-1500,0,0), new THREE.Vector3(1500,0,0)]} color="#111111" lineWidth={1} />
       <Line points={[new THREE.Vector3(0,0,-1200), new THREE.Vector3(0,0,500)]} color="#111111" lineWidth={1} />
     </group>
   )
 }
 
+function Sun() {
+  return (
+    <group position={SUN_POS.toArray()}>
+      {/* Core */}
+      <mesh>
+        <sphereGeometry args={[30, 24, 24]} />
+        <meshBasicMaterial color="#fff9e0" />
+      </mesh>
+      {/* Inner glow */}
+      <mesh>
+        <sphereGeometry args={[44, 24, 24]} />
+        <meshBasicMaterial color="#ffe97a" transparent opacity={0.18} depthWrite={false} />
+      </mesh>
+      {/* Mid glow */}
+      <mesh>
+        <sphereGeometry args={[65, 24, 24]} />
+        <meshBasicMaterial color="#ffcc44" transparent opacity={0.08} depthWrite={false} />
+      </mesh>
+      {/* Outer halo */}
+      <mesh>
+        <sphereGeometry args={[100, 24, 24]} />
+        <meshBasicMaterial color="#ff9900" transparent opacity={0.03} depthWrite={false} />
+      </mesh>
+    </group>
+  )
+}
+
 function Earth() {
   return (
-    <mesh>
-      <sphereGeometry args={[EARTH_R, 40, 40]} />
-      <meshBasicMaterial color="#4a8aff" wireframe transparent opacity={0.4} />
-    </mesh>
+    <group>
+      {/* Solid sphere — receives directional light so terminator is visible */}
+      <mesh>
+        <sphereGeometry args={[EARTH_R, 40, 40]} />
+        <meshStandardMaterial color="#1a4a99" roughness={1} metalness={0} />
+      </mesh>
+      {/* Wireframe overlay for the sci-fi grid aesthetic */}
+      <mesh>
+        <sphereGeometry args={[EARTH_R * 1.002, 40, 40]} />
+        <meshBasicMaterial color="#4a8aff" wireframe transparent opacity={0.25} />
+      </mesh>
+    </group>
   )
 }
 
 function MoonSphere() {
   return (
-    <mesh position={MOON_POS.toArray()}>
-      <sphereGeometry args={[MOON_R, 24, 24]} />
-      <meshBasicMaterial color="#888888" wireframe transparent opacity={0.4} />
-    </mesh>
+    <group position={MOON_POS.toArray()}>
+      <mesh>
+        <sphereGeometry args={[MOON_R, 24, 24]} />
+        <meshStandardMaterial color="#555555" roughness={1} metalness={0} />
+      </mesh>
+      <mesh>
+        <sphereGeometry args={[MOON_R * 1.002, 24, 24]} />
+        <meshBasicMaterial color="#888888" wireframe transparent opacity={0.25} />
+      </mesh>
+    </group>
   )
 }
 
@@ -171,15 +331,16 @@ function CameraController({ controlsRef, animatingRef }: { controlsRef: Controls
         controlsRef.current.update()
         if (camera.position.distanceTo(targetCamPos) < 2) {
           animatingRef.current = false
+          prevZoom.current = zoomLevel
         }
-      } else {
-        const prevTarget = controlsRef.current.target.clone()
-        controlsRef.current.target.lerp(shipPos.current, Math.min(delta * 4, 0.15))
-        const d = controlsRef.current.target.clone().sub(prevTarget)
-        camera.position.add(d)
-        controlsRef.current.update()
+        return // still animating — skip zoom sync
       }
-      return
+      // Non-animating: follow ship, then fall through to zoom sync below
+      const prevTarget = controlsRef.current.target.clone()
+      controlsRef.current.target.lerp(shipPos.current, Math.min(delta * 4, 0.15))
+      const d = controlsRef.current.target.clone().sub(prevTarget)
+      camera.position.add(d)
+      controlsRef.current.update()
     }
 
     // ── Zoom sync (topdown / perspective, after settled) ──
@@ -246,13 +407,17 @@ export default function SceneCanvas() {
 
   return (
     <Canvas
-      camera={{ position: [200, 500, 600], fov: 45, near: 0.1, far: 5000 }}
+      camera={{ position: [200, 500, 600], fov: 45, near: 0.1, far: 12000 }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
       style={{ position: 'absolute', inset: 0, background: '#000', cursor: cursorStyle, zIndex: 0 }}
     >
+      <ambientLight intensity={0.05} />
+      <directionalLight position={SUN_POS.toArray()} intensity={2.2} color="#fff8e7" />
+      <Starfield />
+      <Sun />
       <RangeRings />
       <Earth />
       <MoonSphere />
@@ -273,8 +438,8 @@ export default function SceneCanvas() {
            MIDDLE: THREE.MOUSE.DOLLY,
            RIGHT: THREE.MOUSE.ROTATE
         }}
-        minDistance={1}
-        maxDistance={2500}
+        minDistance={ZOOM_MIN_DIST}
+        maxDistance={ZOOM_MAX_DIST}
       />
     </Canvas>
   )

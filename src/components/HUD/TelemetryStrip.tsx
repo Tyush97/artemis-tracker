@@ -13,11 +13,12 @@ function getPhase(idx: number): string {
 }
 
 export default function TelemetryStrip() {
-  const { 
-    currentVector, 
-    currentMissionTime, 
-    actualCurrentVector, 
-    isLive, 
+  const {
+    currentVector,
+    currentMissionTime,
+    actualCurrentVector,
+    lastHorizonsUpdate,
+    isLive,
     getRealTimeIndex
   } = useMissionStore()
 
@@ -49,12 +50,17 @@ export default function TelemetryStrip() {
 
   const velocity = Math.sqrt(vec.vx ** 2 + vec.vy ** 2 + vec.vz ** 2)
 
+  const updatedLabel = lastHorizonsUpdate
+    ? lastHorizonsUpdate.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC' }) + ' UTC'
+    : '—'
+
   const metrics = [
     { label: 'DIST. EARTH', value: `${distEarth.toLocaleString()} km` },
     { label: 'DIST. MOON',  value: `${distMoon.toLocaleString()} km` },
     { label: 'VELOCITY',    value: `${velocity.toFixed(2)} km/s` },
     { label: 'STATUS',      value: status },
     { label: 'PHASE',       value: getPhase(currentMissionTime) },
+    { label: 'JPL UPDATED', value: updatedLabel },
   ]
 
   return (
