@@ -4,13 +4,16 @@ import trajectory from '../../data/trajectory.json'
 
 // Event indices mapped to the 3212-point real OEM trajectory.
 // Key milestones derived from actual ephemeris timestamps:
-//   idx   0  → 2026-04-02T03:07 — OEM opens, spacecraft already coasting outbound at 41,286 km
-//   idx 325  → 2026-04-02T23:37 — Earth close-pass (~8,400 km geocentric, ~2,000 km altitude)
-//   idx 1115 → 2026-04-05T04:19 — Crosses lunar sphere of influence (~318,300 km from Earth)
-//   idx 1757 → 2026-04-06T23:07 — Lunar flyby closest approach (~413,146 km from Earth)
-//   idx 2416 → 2026-04-08T19:03 — Exits lunar sphere of influence, homeward bound
-//   idx 3050 → 2026-04-10T09:29 — Deep return coast, ~147,000 km from Earth
-//   idx 3180 → 2026-04-10T22:45 — Reentry corridor approach
+//   idx   0  → 2026-04-02T03:07 UTC — OEM opens, coasting outbound at 41,286 km
+//   idx 325  → 2026-04-02T23:37 UTC — Earth close-pass (~2,000 km altitude)
+//   idx 375  → 2026-04-03T03:28 UTC — Day 2 outbound cruise begins
+//   idx 475  → 2026-04-03T10:04 UTC — Crosses 100,000 km from Earth
+//   idx 530  → 2026-04-03T13:44 UTC — Crew wake, systems nominal
+//   idx 1115 → 2026-04-05T04:19 UTC — Lunar sphere of influence
+//   idx 1757 → 2026-04-06T23:07 UTC — Lunar flyby closest approach
+//   idx 2416 → 2026-04-08T19:03 UTC — Exits lunar SOI, homeward bound
+//   idx 3050 → 2026-04-10T09:29 UTC — Deep return coast
+//   idx 3180 → 2026-04-10T22:45 UTC — Reentry corridor approach
 const EVENTS = [
   {
     idx: 0,
@@ -21,6 +24,21 @@ const EVENTS = [
     idx: 325,
     label: 'EARTH CLOSE PASS',
     detail: 'The hybrid free-return arc sweeps Orion back to within ~2,000 km of Earth\'s surface — a planned gravity-shaping maneuver. The crew experience a brief but dramatic close approach before the trajectory curves outward toward the Moon.',
+  },
+  {
+    idx: 375,
+    label: 'DAY 2 — OUTBOUND CRUISE',
+    detail: 'Earth close-pass complete. Trajectory confirmed nominal. Orion climbing steeply away from Earth, velocity decreasing as gravity decelerates the spacecraft. All systems green. Crew settling in for the 2-day coast to lunar space.',
+  },
+  {
+    idx: 475,
+    label: '100,000 KM FROM EARTH',
+    detail: 'Orion crosses the 100,000 km threshold — roughly one-quarter the distance to the Moon. The crew are now farther from Earth than any humans since Apollo 17. Lunar gravity has not yet taken hold; Earth still dominates.',
+  },
+  {
+    idx: 530,
+    label: 'CREW SYSTEMS CHECK',
+    detail: 'Scheduled crew wake and systems health review. Navigation, life support, and comms all nominal. The spacecraft is on a clean free-return arc requiring no correction burns. Crew conducting science activities en route to the Moon.',
   },
   {
     idx: 1115,
@@ -50,13 +68,22 @@ const EVENTS = [
 ]
 
 function getMet(trajectoryIdx: number): string {
-  const t     = new Date(trajectory[trajectoryIdx].timestamp)
-  const start = new Date(trajectory[0].timestamp)
+  const t     = new Date(trajectory[trajectoryIdx].timestamp + 'Z')
+  const start = new Date(trajectory[0].timestamp + 'Z')
   const diff  = t.getTime() - start.getTime()
   const days  = Math.floor(diff / (1000 * 60 * 60 * 24))
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
   const mins  = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
   return `T+${days}d ${String(hours).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m`
+}
+
+function getUtc(trajectoryIdx: number): string {
+  const t = new Date(trajectory[trajectoryIdx].timestamp + 'Z')
+  const mm = String(t.getUTCMonth() + 1).padStart(2, '0')
+  const dd = String(t.getUTCDate()).padStart(2, '0')
+  const hh = String(t.getUTCHours()).padStart(2, '0')
+  const mn = String(t.getUTCMinutes()).padStart(2, '0')
+  return `${t.getUTCFullYear()}-${mm}-${dd} ${hh}:${mn} UTC`
 }
 
 export default function EventTimeline() {
@@ -143,7 +170,7 @@ export default function EventTimeline() {
                   alignItems: 'center',
                   justifyContent: 'flex-end',
                   gap: '0.4rem',
-                  marginBottom: '0.3rem',
+                  marginBottom: '0.15rem',
                 }}>
                   {isLatest && (
                     <span style={{
@@ -157,6 +184,9 @@ export default function EventTimeline() {
                   <span style={{ fontSize: '0.5rem', color: '#666', letterSpacing: '0.08rem' }}>
                     {getMet(ev.idx)}
                   </span>
+                </div>
+                <div style={{ fontSize: '0.45rem', color: '#3a3a3a', letterSpacing: '0.06rem', textAlign: 'right', marginBottom: '0.3rem' }}>
+                  {getUtc(ev.idx)}
                 </div>
 
                 {/* Headline */}
