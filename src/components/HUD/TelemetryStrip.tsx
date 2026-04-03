@@ -1,5 +1,6 @@
 import { useMissionStore } from '../../store/missionStore'
 import { MOON_EME } from '../../data/missionCurve'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 // Phase thresholds mapped to the 3212-point real OEM trajectory
 function getPhase(idx: number): string {
@@ -13,6 +14,7 @@ function getPhase(idx: number): string {
 }
 
 export default function TelemetryStrip() {
+  const isMobile = useIsMobile()
   const {
     currentVector,
     currentMissionTime,
@@ -25,9 +27,6 @@ export default function TelemetryStrip() {
   const realIdx = getRealTimeIndex()
   const isFuture = currentMissionTime > realIdx
 
-  // Logic: 
-  // 1. If currently "Live" (tracking real-time), prefer the HORIZONS live vector.
-  // 2. If historical or projected (scrubbing), use the planned trajectory.
   let vec = currentVector
   let status = 'HISTORIC'
 
@@ -54,36 +53,39 @@ export default function TelemetryStrip() {
     ? lastHorizonsUpdate.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC' }) + ' UTC'
     : '—'
 
+  // On mobile: drop JPL UPDATED row to keep it compact
   const metrics = [
     { label: 'DIST. EARTH', value: `${distEarth.toLocaleString()} km` },
     { label: 'DIST. MOON',  value: `${distMoon.toLocaleString()} km` },
     { label: 'VELOCITY',    value: `${velocity.toFixed(2)} km/s` },
     { label: 'STATUS',      value: status },
-    { label: 'PHASE',       value: getPhase(currentMissionTime) },
-    { label: 'JPL UPDATED', value: updatedLabel },
+    ...(!isMobile ? [
+      { label: 'PHASE',       value: getPhase(currentMissionTime) },
+      { label: 'JPL UPDATED', value: updatedLabel },
+    ] : []),
   ]
 
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: 'repeat(3, 1fr)',
-      gap: '0.625rem 1.25rem',
+      gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+      gap: isMobile ? '0.4rem 0.75rem' : '0.625rem 1.25rem',
       color: '#ffffff',
       fontFamily: 'monospace',
       pointerEvents: 'auto',
     }}>
       {metrics.map((m, i) => (
-        <div key={i} style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
+        <div key={i} style={{
+          display: 'flex',
+          flexDirection: 'column',
           gap: '0.2rem',
           borderLeft: m.label === 'STATUS' && status === 'LIVE' ? '1px solid #ff3333' : 'none',
           paddingLeft: m.label === 'STATUS' && status === 'LIVE' ? '0.5rem' : '0'
         }}>
-          <div style={{ fontSize: '0.5rem', color: '#555', letterSpacing: '0.1rem' }}>{m.label}</div>
-          <div style={{ 
-            fontSize: '0.8rem', 
-            color: m.label === 'STATUS' && status === 'LIVE' ? '#ff3333' : '#fff', 
+          <div style={{ fontSize: '0.45rem', color: '#555', letterSpacing: '0.08rem' }}>{m.label}</div>
+          <div style={{
+            fontSize: isMobile ? '0.65rem' : '0.8rem',
+            color: m.label === 'STATUS' && status === 'LIVE' ? '#ff3333' : '#fff',
             letterSpacing: '0.04rem',
             fontWeight: m.label === 'STATUS' ? 'bold' : 'normal'
           }}>{m.value}</div>

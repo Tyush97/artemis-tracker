@@ -1,16 +1,17 @@
 import { useMissionStore } from '../../store/missionStore'
 import trajectory from '../../data/trajectory.json'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 const LAST_IDX = trajectory.length - 1  // 3211
 
 // Phase boundaries aligned to the 3212-point real OEM trajectory
 const PHASES: Array<[number, string]> = [
-  [324,      'Outbound Coast'],
-  [399,      'Earth Close Pass'],
-  [1114,     'Translunar Coast'],
-  [1756,     'Lunar Approach'],
-  [2415,     'Lunar Flyby'],
-  [3099,     'Return Coast'],
+  [324, 'Outbound Coast'],
+  [399, 'Earth Close Pass'],
+  [1114, 'Translunar Coast'],
+  [1756, 'Lunar Approach'],
+  [2415, 'Lunar Flyby'],
+  [3099, 'Return Coast'],
   [LAST_IDX, 'Return & Reentry'],
 ]
 
@@ -19,6 +20,7 @@ function getPhase(idx: number): string {
 }
 
 export default function MissionIdentity() {
+  const isMobile = useIsMobile()
   const { currentMissionTime } = useMissionStore()
   const isLive = currentMissionTime === LAST_IDX
 
@@ -30,16 +32,16 @@ export default function MissionIdentity() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      gap: '0.5rem',
+      gap: '0.25rem',
       pointerEvents: 'auto',
     }}>
       {/* Mission name */}
-      <span style={{ fontSize: '1.5rem', letterSpacing: '0.15rem', fontWeight: 300 }}>
-        Artemis II - Live Trajectory
+      <span style={{ fontSize: isMobile ? '0.9rem' : '1.5rem', letterSpacing: '0.15rem', fontWeight: 300 }}>
+        Artemis II - Integrity
       </span>
 
       {/* Phase */}
-      <span style={{ fontSize: '0.75rem', color: '#888', letterSpacing: '0.125rem' }}>
+      <span style={{ fontSize: isMobile ? '0.55rem' : '0.75rem', color: '#888', letterSpacing: '0.125rem' }}>
         Phase - {getPhase(currentMissionTime)}
         {isLive && (
           <span style={{

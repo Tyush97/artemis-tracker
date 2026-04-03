@@ -23,11 +23,16 @@ src/
     HUD/
       TelemetryStrip.tsx   # Top-left: Real-time Dist/Vel (Historic/Live/Projected)
       PhaseScrubber.tsx    # Bottom: Capped scrubber [0, Live] with status indicators
+      MissionIdentity.tsx  # Top-center: Mission name + phase
+      MissionElapsed.tsx   # Top-right: Live MET clock + UTC
+      EventTimeline.tsx    # Right sidebar: milestone feed (desktop only)
+      HardwareControls.tsx # Left sidebar: camera/zoom controls (desktop only)
   store/
     missionStore.ts        # Zustand: currentMissionTime, isLive, actualTrajectory, etc.
   hooks/
     useHorizonsTelemetry.ts # Periodic JPL Horizons polling
     useARTOWTelemetry.ts    # NASA trackartemis polling
+    useIsMobile.ts          # Returns true when viewport < 640px
   data/
     trajectory.json        # 3,212-point high-fidelity mission plan
     missionCurve.ts        # CatmullRomCurve3 + coordinate mapping (1 unit = 1,000 km)
@@ -42,9 +47,19 @@ src/
 - Moon position: `(0, 0, -384.4)` scene units
 
 ## HUD Layout
-- **Top left**: `TelemetryStrip` (Dist Earth, Dist Moon, Velocity, STATUS: Live/Historic/Projected)
-- **Top center**: `MissionIdentity` (Phase, MET)
-- **Bottom**: `PhaseScrubber` (Play/Pause, Timeline, Live Pin, user-select: none)
+### Desktop (≥640px)
+- **Top left**: `TelemetryStrip` (3-col grid: Dist Earth, Dist Moon, Velocity, Status, Phase, JPL Updated)
+- **Top center**: `MissionIdentity` (mission name + phase)
+- **Top right**: `MissionElapsed` (DAY N — T+HHhMMmSSs, UTC date/time)
+- **Left sidebar**: `HardwareControls` (camera mode + zoom slider)
+- **Right sidebar**: `EventTimeline` (milestone feed, scrollable)
+- **Bottom**: `PhaseScrubber` (Play/Pause, timeline, LIVE pin outside-right)
+
+### Mobile (<640px)
+- **Top**: `TelemetryStrip` (2-col grid, 4 metrics) + `MissionElapsed` (compact) side by side
+- **Below top**: `MissionIdentity` centered
+- `HardwareControls` and `EventTimeline` hidden (touch gestures replace camera controls)
+- **Bottom**: `PhaseScrubber` (phase tick labels hidden, LIVE button positioned above bar)
 
 ## Store Shape (`missionStore.ts`)
 ```ts
@@ -53,6 +68,7 @@ isLive: boolean                 // True if at or past getRealTimeIndex()
 isPlaying: boolean              // Playback state (stops at live mark)
 actualTrajectory: StateVector[] // Flown arc from HORIZONS
 actualCurrentVector: StateVector|null // Latest live vector from JPL
+lastHorizonsUpdate: Date|null   // Wall-clock time of last successful HORIZONS poll
 ```
 
 ## Design Direction

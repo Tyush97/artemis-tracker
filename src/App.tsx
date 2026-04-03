@@ -9,6 +9,7 @@ import PhaseScrubber from './components/HUD/PhaseScrubber'
 import { useMissionStore } from './store/missionStore'
 import { useARTOWTelemetry } from './hooks/useARTOWTelemetry'
 import { useHorizonsTelemetry } from './hooks/useHorizonsTelemetry'
+import { useIsMobile } from './hooks/useIsMobile'
 import './index.css'
 
 function syncToRealTime() {
@@ -34,6 +35,7 @@ function syncToRealTime() {
 
 export default function App() {
   const { isPlaying, setIsPlaying } = useMissionStore()
+  const isMobile = useIsMobile()
 
   // Mount telemetry polling hooks
   useARTOWTelemetry()
@@ -92,21 +94,33 @@ export default function App() {
         pointerEvents: 'none',
         display: 'flex',
         flexDirection: 'column',
-        padding: '1.5rem',
+        padding: isMobile ? '0.75rem' : '1.5rem',
         boxSizing: 'border-box'
       }}>
-        {/* TOP BAR — 3-column so MissionIdentity is at true center */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 2.5fr 1fr',
-          alignItems: 'flex-start',
-          width: '100%',
-          marginBottom: '0.625rem'
-        }}>
-          <div style={{ pointerEvents: 'auto' }}><TelemetryStrip /></div>
-          <div style={{ pointerEvents: 'auto', display: 'flex', justifyContent: 'center' }}><MissionIdentity /></div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', pointerEvents: 'auto' }}><MissionElapsed /></div>
-        </div>
+        {/* TOP BAR */}
+        {isMobile ? (
+          <div style={{ width: '100%', marginBottom: '0.5rem', pointerEvents: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <TelemetryStrip />
+              <MissionElapsed />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.5rem' }}>
+              <MissionIdentity />
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 2.5fr 1fr',
+            alignItems: 'flex-start',
+            width: '100%',
+            marginBottom: '0.625rem'
+          }}>
+            <div style={{ pointerEvents: 'auto' }}><TelemetryStrip /></div>
+            <div style={{ pointerEvents: 'auto', display: 'flex', justifyContent: 'center' }}><MissionIdentity /></div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', pointerEvents: 'auto' }}><MissionElapsed /></div>
+          </div>
+        )}
 
         {/* MID SECTION (Sidebars) */}
         <div style={{
@@ -117,8 +131,8 @@ export default function App() {
           minHeight: 0,
           width: '100%'
         }}>
-          <div style={{ pointerEvents: 'auto', height: 'fit-content', alignSelf: 'center' }}><HardwareControls /></div>
-          <div style={{ pointerEvents: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}><EventTimeline /></div>
+          {!isMobile && <div style={{ pointerEvents: 'auto', height: 'fit-content', alignSelf: 'center' }}><HardwareControls /></div>}
+          {!isMobile && <div style={{ pointerEvents: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}><EventTimeline /></div>}
         </div>
 
         {/* BOTTOM BAR */}

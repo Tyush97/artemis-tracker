@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import trajectory from '../../data/trajectory.json'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
 const LAUNCH_MS = new Date(trajectory[0].timestamp + 'Z').getTime()
 
 export default function MissionElapsed() {
+  const isMobile = useIsMobile()
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
@@ -20,6 +22,22 @@ export default function MissionElapsed() {
 
   const utcDate = now.toISOString().slice(0, 10)
   const utcTime = now.toISOString().slice(11, 19) + ' UTC'
+
+  if (isMobile) {
+    return (
+      <div style={{ fontFamily: 'monospace', textAlign: 'right', pointerEvents: 'auto' }}>
+        <div style={{ fontSize: '0.4rem', color: '#555', letterSpacing: '0.08rem', marginBottom: '0.15rem' }}>
+          MISSION ELAPSED
+        </div>
+        <div style={{ fontSize: '0.65rem', color: '#fff', letterSpacing: '0.04rem' }}>
+          {`D${days + 1} T+${String(hours).padStart(2, '0')}h${String(mins).padStart(2, '0')}m${String(secs).padStart(2, '0')}s`}
+        </div>
+        <div style={{ fontSize: '0.4rem', color: '#555', letterSpacing: '0.04rem', marginTop: '0.15rem' }}>
+          {utcTime}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ fontFamily: 'monospace', textAlign: 'right', pointerEvents: 'auto' }}>
