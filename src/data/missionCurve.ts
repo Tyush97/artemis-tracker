@@ -38,6 +38,18 @@ export function toSceneVec(x: number, y: number, z: number): THREE.Vector3 {
   )
 }
 
+// ── HORIZONS → OEM frame conversion ────────────────────────────────────────
+// JPL HORIZONS returns vectors in J2000 equatorial; the OEM uses a rotated
+// frame. The 2×2 rotation in the YZ plane was derived by aligning matching
+// timestamps from both sources. X is identical across frames.
+export function horizonsToOEM(hx: number, hy: number, hz: number): { x: number; y: number; z: number } {
+  return {
+    x:  hx,
+    y:  0.9930 * hy - 1.1290 * hz,
+    z:  0.4394 * hy + 0.5131 * hz,
+  }
+}
+
 // ── Smooth CatmullRom spline through all 3212 waypoints ───────────────────
 export const missionCurve = new THREE.CatmullRomCurve3(
   trajectory.map(p => toSceneVec(p.x, p.y, p.z)),

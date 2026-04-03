@@ -15,7 +15,7 @@ export function useARTOWTelemetry() {
       try {
         // Poll the AROW data endpoint. We include keepalive: true to meet
         // the requirement of keeping the connection open despite polling.
-        const response = await fetch(AROW_DATA_ENDPOINT, {
+        const response = await fetch('/api/nasa-proxy?url=' + encodeURIComponent(AROW_DATA_ENDPOINT), {
           keepalive: true,
         });
 

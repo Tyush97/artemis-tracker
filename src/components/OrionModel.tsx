@@ -105,8 +105,41 @@ const outlineFragmentShader = /* glsl */`
   }
 `
 
+function RippleRing({ index }: { index: number }) {
+  const ref = useRef<THREE.Mesh>(null)
+  const startTime = index * 0.6
+
+  useFrame(({ clock }) => {
+    if (!ref.current) return
+    const { isLive } = useMissionStore.getState()
+
+    const time = (clock.getElapsedTime() + startTime) % 1.8
+    const t = time / 1.8
+
+    if (!isLive && t < 0.1) {
+      ref.current.visible = false
+      return
+    }
+
+    ref.current.visible = true
+    const scale = 0.5 + t * 4
+    ref.current.scale.set(scale, scale, 1)
+    if (ref.current.material instanceof THREE.MeshBasicMaterial) {
+      ref.current.material.opacity = (1 - t) * 0.5
+    }
+  })
+
+  return (
+    <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[0.9, 1.0, 32]} />
+      <meshBasicMaterial color="#ffffff" transparent opacity={0} side={THREE.DoubleSide} />
+    </mesh>
+  )
+}
+
 export default function OrionModel() {
   const groupRef = useRef<THREE.Group>(null)
+  const { isLive } = useMissionStore()
 
   missionCurve.getPoint(0, _pos)
   const visualPos = useRef(_pos.clone())
@@ -119,7 +152,7 @@ export default function OrionModel() {
   }), [])
 
   const outlineMat = useMemo(() => new THREE.ShaderMaterial({
-    uniforms: { outlineThickness: { value: 0.0 } },
+    uniforms: { outlineThickness: { value: 0.02 } }, // Added some thickness
     vertexShader: outlineVertexShader,
     fragmentShader: outlineFragmentShader,
     side: THREE.BackSide,
@@ -128,7 +161,8 @@ export default function OrionModel() {
   useFrame((_, delta) => {
     if (!groupRef.current) return
 
-    const t = useMissionStore.getState().currentMissionTime / LAST
+    const { currentMissionTime } = useMissionStore.getState()
+    const t = currentMissionTime / LAST
 
     missionCurve.getPoint(t, _pos)
     missionCurve.getTangent(t, _tangent)
@@ -137,7 +171,7 @@ export default function OrionModel() {
     groupRef.current.position.copy(visualPos.current)
 
     if (_tangent.lengthSq() > 1e-6) {
-      _mat.lookAt(new THREE.Vector3(0, 0, 0), _tangent.negate(), _up)
+      _mat.lookAt(new THREE.Vector3(0, 0, 0), _tangent.clone().negate(), _up)
       _qTarget.setFromRotationMatrix(_mat)
       groupRef.current.quaternion.slerp(_qTarget, Math.min(delta * 8, 1))
     }
@@ -145,8 +179,17 @@ export default function OrionModel() {
 
   return (
     <group ref={groupRef}>
+      {/* Ripples beneath the ship */}
+      {isLive && (
+        <group position={[0, 0, 0]}>
+          <RippleRing index={0} />
+          <RippleRing index={1} />
+          <RippleRing index={2} />
+        </group>
+      )}
+
       {/* Rotate so +Y tip aligns with Three.js -Z forward */}
-      <group rotation={[Math.PI / 2, 0, 0]} /*position={[0, 0, -0.8]}*/>
+      <group rotation={[Math.PI / 2, 0, 0]}>
         {/* Black fill */}
         <mesh geometry={chevronGeo} material={fillMat} />
         {/* White outline via back-face expansion */}

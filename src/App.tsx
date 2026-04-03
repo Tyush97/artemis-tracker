@@ -7,10 +7,44 @@ import HardwareControls from './components/HUD/HardwareControls'
 import EventTimeline from './components/HUD/EventTimeline'
 import PhaseScrubber from './components/HUD/PhaseScrubber'
 import { useMissionStore } from './store/missionStore'
+import { useARTOWTelemetry } from './hooks/useARTOWTelemetry'
+import { useHorizonsTelemetry } from './hooks/useHorizonsTelemetry'
 import './index.css'
+
+function syncToRealTime() {
+  const traj = useMissionStore.getState().trajectory
+  const now = Date.now()
+  // Mission hasn't started yet — stay at index 0
+  const missionStart = new Date(traj[0].timestamp).getTime()
+  const missionEnd   = new Date(traj[traj.length - 1].timestamp).getTime()
+  if (now < missionStart) return
+  if (now > missionEnd) {
+    useMissionStore.getState().setMissionTime(traj.length - 1)
+    return
+  }
+  // Binary-search for the closest trajectory point
+  let lo = 0, hi = traj.length - 1
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1
+    if (new Date(traj[mid].timestamp).getTime() < now) lo = mid + 1
+    else hi = mid
+  }
+  useMissionStore.getState().setMissionTime(lo)
+}
 
 export default function App() {
   const { isPlaying, setIsPlaying } = useMissionStore()
+
+  // Mount telemetry polling hooks
+  useARTOWTelemetry()
+  useHorizonsTelemetry()
+
+  // Sync trajectory position to real wall-clock time
+  useEffect(() => {
+    syncToRealTime()
+    const id = setInterval(syncToRealTime, 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

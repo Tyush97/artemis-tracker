@@ -86,9 +86,9 @@ function MoonSphere() {
 
 function TrajectoryLine() {
   const idx = useMissionStore(s => s.currentMissionTime)
-  const splitIdx = Math.round((idx / LAST) * (CURVE_PTS.length - 1))
 
-  const pastPts = useMemo(() => CURVE_PTS.slice(0, Math.max(splitIdx + 1, 2)), [splitIdx])
+  const splitIdx  = Math.round((idx / LAST) * (CURVE_PTS.length - 1))
+  const pastPts   = useMemo(() => CURVE_PTS.slice(0, Math.max(splitIdx + 1, 2)), [splitIdx])
   const futurePts = useMemo(() => CURVE_PTS.slice(Math.max(splitIdx, 0)), [splitIdx])
 
   return (
@@ -176,26 +176,36 @@ function CameraController({ controlsRef }: { controlsRef: ControlsRef }) {
       }
     }
 
-    // ── Zoom slider response (works in both modes, only on change) ──
-    if (zoomLevel !== prevZoom.current) {
-      prevZoom.current = zoomLevel
-      const target = controlsRef.current.target
-      const dir = camera.position.clone().sub(target)
-      const currentDist = dir.length()
-      if (currentDist > 0.01) {
-        dir.normalize()
-        const desiredDist = ZOOM_MAX_DIST - (zoomLevel / 100) * (ZOOM_MAX_DIST - ZOOM_MIN_DIST)
-        camera.position.copy(target).addScaledVector(dir, desiredDist)
+    // ── Zoom Logic ─────────────────────────────────────
+    // IMPORTANT: Only sync zoom when 'settled'. 
+    // If we sync during a lerp, the changing distance updates the store's zoomLevel,
+    // which in turn updates overviewCamPos, causing a feedback loop where the 
+    // camera chases a moving target (the "zooming out" bug).
+    if (settled.current) {
+      if (zoomLevel !== prevZoom.current) {
+        prevZoom.current = zoomLevel
+        const target = controlsRef.current.target
+        const dir = camera.position.clone().sub(target)
+        const currentDist = dir.length()
+        if (currentDist > 0.01) {
+          dir.normalize()
+          const desiredDist = ZOOM_MAX_DIST - (zoomLevel / 100) * (ZOOM_MAX_DIST - ZOOM_MIN_DIST)
+          camera.position.copy(target).addScaledVector(dir, desiredDist)
+          controlsRef.current.update() // Update controls after manual position change
+        }
+      } else {
+        // ── Sync scroll/dolly back to slider ──────────────────────────
+        const dist = camera.position.distanceTo(controlsRef.current.target)
+        const synced = Math.round((1 - (dist - ZOOM_MIN_DIST) / (ZOOM_MAX_DIST - ZOOM_MIN_DIST)) * 100)
+        const clamped = Math.max(0, Math.min(100, synced))
+        if (Math.abs(clamped - prevZoom.current) >= 1) {
+          prevZoom.current = clamped
+          setZoomLevel(clamped)
+        }
       }
     } else {
-      // ── Sync scroll/dolly back to slider ──────────────────────────
-      const dist = camera.position.distanceTo(controlsRef.current.target)
-      const synced = Math.round((1 - (dist - ZOOM_MIN_DIST) / (ZOOM_MAX_DIST - ZOOM_MIN_DIST)) * 100)
-      const clamped = Math.max(0, Math.min(100, synced))
-      if (Math.abs(clamped - prevZoom.current) >= 1) {
-        prevZoom.current = clamped
-        setZoomLevel(clamped)
-      }
+      // While lerping, keep prevZoom in sync so there's no jump when we settle
+      prevZoom.current = zoomLevel
     }
   })
 
