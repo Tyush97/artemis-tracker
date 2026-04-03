@@ -48,7 +48,7 @@ const TopDownIcon = ({ color }: { color: string }) => (
   </svg>
 )
 
-export default function HardwareControls() {
+export default function HardwareControls({ horizontal = false }: { horizontal?: boolean }) {
   const { cameraMode, setCameraMode, controlMode, setControlMode, zoomLevel, setZoomLevel } = useMissionStore()
 
   const sliderRef = useRef<HTMLDivElement>(null)
@@ -105,16 +105,8 @@ export default function HardwareControls() {
     flexShrink: 0,
   })
 
-  return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'flex-start',
-      gap: '0.75rem',
-      pointerEvents: 'auto',
-    }}>
-
-      {/* Single-column button stack */}
+  const buttons = (
+    <>
       <button title="Pan" onClick={() => setControlMode('pan')} style={sq(controlMode === 'pan')}>
         <HandIcon color={controlMode === 'pan' ? '#000' : '#666'} />
       </button>
@@ -142,6 +134,32 @@ export default function HardwareControls() {
       >
         <CubeIcon color={cameraMode === 'perspective' ? '#000' : '#666'} />
       </button>
+    </>
+  )
+
+  if (horizontal) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'row',
+        gap: '0.5rem',
+        pointerEvents: 'auto',
+        justifyContent: 'center',
+      }}>
+        {buttons}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      gap: '0.75rem',
+      pointerEvents: 'auto',
+    }}>
+      {buttons}
 
       {/* Spacer */}
       <div style={{ height: '0.5rem' }} />
@@ -177,7 +195,6 @@ export default function HardwareControls() {
         </div>
         <button onClick={() => nudgeZoom(-10)} style={nudgeStyle}>−</button>
       </div>
-
     </div>
   )
 }

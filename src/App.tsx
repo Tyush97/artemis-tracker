@@ -94,59 +94,80 @@ export default function App() {
         pointerEvents: 'none',
         display: 'flex',
         flexDirection: 'column',
-        padding: isMobile ? '0.75rem' : '1.5rem',
+        padding: isMobile
+          ? '0.75rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom)) 0.75rem'
+          : '1.5rem',
         boxSizing: 'border-box'
       }}>
-        {/* TOP BAR */}
         {isMobile ? (
-          <div style={{ width: '100%', marginBottom: '0.5rem', pointerEvents: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <>
+            {/* MOBILE TOP ROW: telemetry left | identity+time right */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              width: '100%',
+              pointerEvents: 'auto',
+              marginBottom: '0.25rem',
+            }}>
               <TelemetryStrip />
-              <MissionElapsed />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+                <MissionIdentity />
+                <MissionElapsed />
+              </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.5rem' }}>
-              <MissionIdentity />
+
+            {/* MOBILE MID: space for 3D scene */}
+            <div style={{ flex: 1 }} />
+
+            {/* MOBILE BOTTOM: scrubber then camera buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', width: '100%', pointerEvents: 'auto' }}>
+              <PhaseScrubber />
+              <HardwareControls horizontal />
             </div>
-          </div>
+          </>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 2.5fr 1fr',
-            alignItems: 'flex-start',
-            width: '100%',
-            marginBottom: '0.625rem'
-          }}>
-            <div style={{ pointerEvents: 'auto' }}><TelemetryStrip /></div>
-            <div style={{ pointerEvents: 'auto', display: 'flex', justifyContent: 'center' }}><MissionIdentity /></div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', pointerEvents: 'auto' }}><MissionElapsed /></div>
-          </div>
+          <>
+            {/* DESKTOP TOP BAR */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 2.5fr 1fr',
+              alignItems: 'flex-start',
+              width: '100%',
+              marginBottom: '0.625rem'
+            }}>
+              <div style={{ pointerEvents: 'auto' }}><TelemetryStrip /></div>
+              <div style={{ pointerEvents: 'auto', display: 'flex', justifyContent: 'center' }}><MissionIdentity /></div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', pointerEvents: 'auto' }}><MissionElapsed /></div>
+            </div>
+
+            {/* DESKTOP MID SECTION (Sidebars) */}
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'stretch',
+              minHeight: 0,
+              width: '100%'
+            }}>
+              <div style={{ pointerEvents: 'auto', height: 'fit-content', alignSelf: 'center' }}><HardwareControls /></div>
+              <div style={{ pointerEvents: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}><EventTimeline /></div>
+            </div>
+
+            {/* DESKTOP BOTTOM BAR */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'flex-end',
+              width: '100%',
+              paddingTop: '0.625rem'
+            }}>
+              <div style={{ pointerEvents: 'auto', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                <PhaseScrubber />
+              </div>
+            </div>
+          </>
         )}
-
-        {/* MID SECTION (Sidebars) */}
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'stretch',
-          minHeight: 0,
-          width: '100%'
-        }}>
-          {!isMobile && <div style={{ pointerEvents: 'auto', height: 'fit-content', alignSelf: 'center' }}><HardwareControls /></div>}
-          {!isMobile && <div style={{ pointerEvents: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}><EventTimeline /></div>}
-        </div>
-
-        {/* BOTTOM BAR */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'flex-end',
-          width: '100%',
-          paddingTop: '0.625rem'
-        }}>
-          <div style={{ pointerEvents: 'auto', width: '100%', display: 'flex', justifyContent: 'center' }}>
-            <PhaseScrubber />
-          </div>
-        </div>
       </div>
     </div>
   )
