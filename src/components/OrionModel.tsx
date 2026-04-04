@@ -2,7 +2,7 @@ import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useMissionStore } from '../store/missionStore'
-import { missionCurve, LAST } from '../data/missionCurve'
+import { missionCurve, idxToT } from '../data/missionCurve'
 
 const _pos = new THREE.Vector3()
 const _tangent = new THREE.Vector3()
@@ -162,7 +162,7 @@ export default function OrionModel() {
     if (!groupRef.current) return
 
     const { currentMissionTime } = useMissionStore.getState()
-    const t = currentMissionTime / LAST
+    const t = idxToT(currentMissionTime)
 
     missionCurve.getPoint(t, _pos)
     missionCurve.getTangent(t, _tangent)

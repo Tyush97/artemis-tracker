@@ -1,115 +1,105 @@
 import { useEffect, useRef, useState } from 'react'
+import { fetchNasaBlogFeed, formatMet, formatUtcShort, type BlogEntry } from '../../lib/fetchNasaBlogFeed'
+import { fetchMissionEvents, type SpaceDevsEntry } from '../../lib/fetchMissionEvents'
 import { useMissionStore } from '../../store/missionStore'
-import trajectory from '../../data/trajectory.json'
+import trajectoryData from '../../data/trajectory.json'
+import { LAUNCH_N } from '../../data/missionCurve'
 
-// Event indices mapped to the 3212-point real OEM trajectory.
-// Key milestones derived from actual ephemeris timestamps:
-//   idx   0  → 2026-04-02T03:07 UTC — OEM opens, coasting outbound at 41,286 km
-//   idx 325  → 2026-04-02T23:37 UTC — Earth close-pass (~2,000 km altitude)
-//   idx 375  → 2026-04-03T03:28 UTC — Day 2 outbound cruise begins
-//   idx 475  → 2026-04-03T10:04 UTC — Crosses 100,000 km from Earth
-//   idx 530  → 2026-04-03T13:44 UTC — Crew wake, systems nominal
-//   idx 1115 → 2026-04-05T04:19 UTC — Lunar sphere of influence
-//   idx 1757 → 2026-04-06T23:07 UTC — Lunar flyby closest approach
-//   idx 2416 → 2026-04-08T19:03 UTC — Exits lunar SOI, homeward bound
-//   idx 3050 → 2026-04-10T09:29 UTC — Deep return coast
-//   idx 3180 → 2026-04-10T22:45 UTC — Reentry corridor approach
-const EVENTS = [
-  {
-    idx: 0,
-    label: 'OUTBOUND COAST',
-    detail: 'OEM tracking opens. Orion/SLS has completed the Translunar Injection burn. The crew are coasting through deep space at 41,286 km, accelerating away from Earth on a hybrid free-return trajectory.',
-  },
-  {
-    idx: 325,
-    label: 'EARTH CLOSE PASS',
-    detail: 'The hybrid free-return arc sweeps Orion back to within ~2,000 km of Earth\'s surface — a planned gravity-shaping maneuver. The crew experience a brief but dramatic close approach before the trajectory curves outward toward the Moon.',
-  },
-  {
-    idx: 375,
-    label: 'DAY 2 — OUTBOUND CRUISE',
-    detail: 'Earth close-pass complete. Trajectory confirmed nominal. Orion climbing steeply away from Earth, velocity decreasing as gravity decelerates the spacecraft. All systems green. Crew settling in for the 2-day coast to lunar space.',
-  },
-  {
-    idx: 475,
-    label: '100,000 KM FROM EARTH',
-    detail: 'Orion crosses the 100,000 km threshold — roughly one-quarter the distance to the Moon. The crew are now farther from Earth than any humans since Apollo 17. Lunar gravity has not yet taken hold; Earth still dominates.',
-  },
-  {
-    idx: 530,
-    label: 'CREW SYSTEMS CHECK',
-    detail: 'Scheduled crew wake and systems health review. Navigation, life support, and comms all nominal. The spacecraft is on a clean free-return arc requiring no correction burns. Crew conducting science activities en route to the Moon.',
-  },
-  {
-    idx: 1115,
-    label: 'LUNAR SPHERE OF INFLUENCE',
-    detail: 'At ~318,300 km from Earth, the Moon\'s gravity overtakes Earth\'s. Orion begins to accelerate without any engine burn. The crew are now in lunar space — the closest humans have been to another world since Apollo 17.',
-  },
-  {
-    idx: 1757,
-    label: 'LUNAR FLYBY',
-    detail: 'Orion skims ~8,900 km above the lunar surface — closer than any crewed spacecraft since Apollo. No orbit insertion. Free-return trajectory confirmed. The crew photograph the Moon at closest approach before beginning the long coast home.',
-  },
-  {
-    idx: 2416,
-    label: 'RETURN COAST BEGINS',
-    detail: 'Orion exits the lunar sphere of influence and re-enters Earth\'s gravitational dominance. The service module provides a minor trajectory correction burn. Crew rest period begins. ~2 days to reentry corridor.',
-  },
-  {
-    idx: 3050,
-    label: 'DEEP RETURN',
-    detail: 'Homeward bound at ~147,000 km. Orion is now falling toward Earth, velocity climbing steadily. Final systems checks are underway. Entry, Descent & Landing procedures being reviewed.',
-  },
-  {
-    idx: 3180,
-    label: 'REENTRY & SPLASHDOWN',
-    detail: 'Command Module separates from the service module. 11-minute reentry at Mach 32. Skip-reentry trajectory bleeds off excess velocity. Drogue and main chutes deploy. Splashdown in the Pacific. Artemis II complete.',
-  },
-]
+type FeedEntry = (BlogEntry | SpaceDevsEntry) & { critical?: boolean; trajectoryIdx: number }
 
-function getMet(trajectoryIdx: number): string {
-  const t     = new Date(trajectory[trajectoryIdx].timestamp + 'Z')
-  const start = new Date(trajectory[0].timestamp + 'Z')
-  const diff  = t.getTime() - start.getTime()
-  const days  = Math.floor(diff / (1000 * 60 * 60 * 24))
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-  const mins  = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-  return `T+${days}d ${String(hours).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m`
+const LAUNCH_TIME_MS = new Date('2026-04-01T23:44:00Z').getTime()
+
+/** Maps a UTC timestamp to a store index in [-LAUNCH_N, LAST]. */
+function findTrajectoryIdx(utc: Date): number {
+  const target = utc.getTime()
+  const oemStart = new Date((trajectoryData[0] as { timestamp: string }).timestamp + 'Z').getTime()
+  const oemEnd   = new Date((trajectoryData[trajectoryData.length - 1] as { timestamp: string }).timestamp + 'Z').getTime()
+
+  if (target <= LAUNCH_TIME_MS) return -LAUNCH_N
+
+  // In launch arc (between liftoff and first OEM point)
+  if (target < oemStart) {
+    const frac = (target - LAUNCH_TIME_MS) / (oemStart - LAUNCH_TIME_MS)
+    return Math.round(-LAUNCH_N + frac * LAUNCH_N)
+  }
+
+  if (target >= oemEnd) return trajectoryData.length - 1
+
+  let lo = 0, hi = trajectoryData.length - 1
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1
+    const t = new Date((trajectoryData[mid] as { timestamp: string }).timestamp + 'Z').getTime()
+    if (t < target) lo = mid + 1
+    else hi = mid
+  }
+  return lo
 }
 
-function getUtc(trajectoryIdx: number): string {
-  const t = new Date(trajectory[trajectoryIdx].timestamp + 'Z')
-  const mm = String(t.getUTCMonth() + 1).padStart(2, '0')
-  const dd = String(t.getUTCDate()).padStart(2, '0')
-  const hh = String(t.getUTCHours()).padStart(2, '0')
-  const mn = String(t.getUTCMinutes()).padStart(2, '0')
-  return `${t.getUTCFullYear()}-${mm}-${dd} ${hh}:${mn} UTC`
+const CRITICAL_KEYWORDS = /abort|anomaly|hold|scrub|emergency|failure|contingency|off-nominal|troubleshoot/i
+
+const SOURCE_LABELS: Record<FeedEntry['source'], string> = {
+  'artemis-blog': 'NASA ARTEMIS BLOG',
+  'nasa-news': 'NASA NEWS',
+  'spacedevs': 'SPACE DEVS',
 }
 
 export default function EventTimeline() {
-  const { currentMissionTime, setMissionTime, setIsPlaying } = useMissionStore()
+  const { setMissionTime, setIsPlaying, currentMissionTime } = useMissionStore()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [feed, setFeed] = useState<FeedEntry[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const [peakTime, setPeakTime] = useState(currentMissionTime)
-  useEffect(() => {
-    if (currentMissionTime > peakTime) setPeakTime(currentMissionTime)
-  }, [currentMissionTime])
-
-  const visibleEvents = [...EVENTS].filter(ev => peakTime >= ev.idx).reverse()
-
-  const passed    = EVENTS.filter(ev => currentMissionTime >= ev.idx)
-  const activeIdx = passed.length > 0 ? passed[passed.length - 1].idx : -1
-
-  const handleClick = (idx: number) => {
+  const handleEntryClick = (idx: number) => {
     setIsPlaying(false)
     setMissionTime(idx)
   }
 
+  // Feed sorted descending by time. Active = first entry whose moment has been reached.
+  const activeIdx = feed.findIndex(e => e.trajectoryIdx <= currentMissionTime)
+
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' })
+    let cancelled = false
+
+    async function load() {
+      const [blogEntries, sdEntries] = await Promise.all([
+        fetchNasaBlogFeed(),
+        fetchMissionEvents(),
+      ])
+
+      if (cancelled) return
+
+      const all: FeedEntry[] = [...blogEntries, ...sdEntries].map((e) => ({
+        ...e,
+        critical: CRITICAL_KEYWORDS.test(e.title) || CRITICAL_KEYWORDS.test(e.description),
+        trajectoryIdx: findTrajectoryIdx(e.publishedUtc),
+      }))
+
+      // Sort descending by timestamp (newest first)
+      all.sort((a, b) => b.publishedUtc.getTime() - a.publishedUtc.getTime())
+
+      // Deduplicate by normalized title (same headline from multiple feeds)
+      const seen = new Set<string>()
+      const deduped = all.filter((e) => {
+        const key = e.title.toLowerCase().replace(/\s+/g, ' ').trim()
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+
+      setFeed(deduped)
+      setLoading(false)
     }
-  }, [activeIdx])
+
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  // Auto-scroll to top (most recent) on load
+  useEffect(() => {
+    if (!loading && scrollRef.current) {
+      scrollRef.current.scrollTo({ top: 0 })
+    }
+  }, [loading])
 
   return (
     <div style={{
@@ -148,23 +138,48 @@ export default function EventTimeline() {
             paddingBottom: '5rem',
           }}
         >
-          {visibleEvents.map((ev, i) => {
-            const isCurrent = ev.idx === activeIdx
-            const isLatest  = i === 0
+          {loading && (
+            <div style={{
+              fontSize: '0.5rem',
+              color: '#555',
+              textAlign: 'right',
+              paddingRight: '0.75rem',
+              paddingTop: '1rem',
+            }}>
+              FETCHING FEED...
+            </div>
+          )}
+
+          {!loading && feed.length === 0 && (
+            <div style={{
+              fontSize: '0.5rem',
+              color: '#555',
+              textAlign: 'right',
+              paddingRight: '0.75rem',
+              paddingTop: '1rem',
+            }}>
+              NO UPDATES AVAILABLE
+            </div>
+          )}
+
+          {feed.map((entry, i) => {
+            const isLatest = i === 0
+            const isActive = i === activeIdx
+
             return (
               <div
-                key={ev.idx}
-                onClick={() => handleClick(ev.idx)}
+                key={`${entry.source}-${entry.publishedUtc.getTime()}-${i}`}
+                onClick={() => handleEntryClick(entry.trajectoryIdx)}
                 style={{
                   cursor: 'pointer',
                   paddingBottom: '1rem',
                   marginBottom: '1rem',
                   borderBottom: '1px solid #141414',
-                  opacity: isCurrent ? 1 : 0.45,
+                  opacity: isActive ? 1 : 0.45,
                   transition: 'opacity 0.3s',
                 }}
               >
-                {/* Timestamp row */}
+                {/* MET timestamp row */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -182,40 +197,83 @@ export default function EventTimeline() {
                     }} />
                   )}
                   <span style={{ fontSize: '0.5rem', color: '#666', letterSpacing: '0.08rem' }}>
-                    {getMet(ev.idx)}
+                    {formatMet(entry.publishedUtc)}
                   </span>
                 </div>
-                <div style={{ fontSize: '0.45rem', color: '#3a3a3a', letterSpacing: '0.06rem', textAlign: 'right', marginBottom: '0.3rem' }}>
-                  {getUtc(ev.idx)}
-                </div>
 
-                {/* Headline */}
+                {/* UTC timestamp */}
                 <div style={{
-                  fontSize: '0.625rem',
-                  color: isCurrent ? '#fff' : '#aaa',
-                  letterSpacing: '0.1rem',
-                  fontWeight: isCurrent ? 700 : 400,
+                  fontSize: '0.45rem',
+                  color: '#3a3a3a',
+                  letterSpacing: '0.06rem',
                   textAlign: 'right',
-                  borderRight: isCurrent ? '2px solid #fff' : '1px solid #2a2a2a',
-                  paddingRight: '0.75rem',
-                  marginBottom: '0.4rem',
-                  lineHeight: '1.3',
+                  marginBottom: '0.3rem',
                 }}>
-                  {ev.label}
+                  {formatUtcShort(entry.publishedUtc)}
                 </div>
 
-                {/* Detail blurb — only show for current and 1 back */}
-                {i < 2 && (
+                {/* Title — with optional amber chip for critical */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'flex-end',
+                  gap: '0.35rem',
+                  marginBottom: '0.4rem',
+                  paddingRight: '0.75rem',
+                  borderRight: isActive ? '2px solid #fff' : '1px solid #2a2a2a',
+                }}>
+                  {entry.critical && (
+                    <span style={{
+                      fontSize: '0.4rem',
+                      backgroundColor: '#b8860b',
+                      color: '#000',
+                      padding: '0.08rem 0.3rem',
+                      borderRadius: '2px',
+                      fontWeight: 700,
+                      letterSpacing: '0.06rem',
+                      flexShrink: 0,
+                      lineHeight: '1.4',
+                    }}>
+                      CRITICAL
+                    </span>
+                  )}
+                  <span style={{
+                    fontSize: '0.625rem',
+                    color: isActive ? '#fff' : '#aaa',
+                    letterSpacing: '0.1rem',
+                    fontWeight: isActive ? 700 : 400,
+                    textAlign: 'right',
+                    lineHeight: '1.3',
+                    textTransform: 'uppercase',
+                  }}>
+                    {entry.title}
+                  </span>
+                </div>
+
+                {/* Description — show for active entry and 2 below it */}
+                {i < 3 && entry.description && (
                   <div style={{
                     fontSize: '0.5625rem',
-                    color: isCurrent ? '#888' : '#444',
+                    color: isActive ? '#888' : '#444',
                     lineHeight: '1.6',
                     textAlign: 'right',
                     paddingRight: '0.75rem',
                   }}>
-                    {ev.detail}
+                    {entry.description}
                   </div>
                 )}
+
+                {/* Source badge */}
+                <div style={{
+                  fontSize: '0.375rem',
+                  color: '#333',
+                  textAlign: 'right',
+                  paddingRight: '0.75rem',
+                  marginTop: '0.25rem',
+                  letterSpacing: '0.06rem',
+                }}>
+                  {SOURCE_LABELS[entry.source]}
+                </div>
               </div>
             )
           })}

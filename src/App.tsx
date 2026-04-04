@@ -13,24 +13,7 @@ import { useIsMobile } from './hooks/useIsMobile'
 import './index.css'
 
 function syncToRealTime() {
-  const traj = useMissionStore.getState().trajectory
-  const now = Date.now()
-  // Mission hasn't started yet — stay at index 0
-  const missionStart = new Date(traj[0].timestamp).getTime()
-  const missionEnd = new Date(traj[traj.length - 1].timestamp).getTime()
-  if (now < missionStart) return
-  if (now > missionEnd) {
-    useMissionStore.getState().setMissionTime(traj.length - 1)
-    return
-  }
-  // Binary-search for the closest trajectory point
-  let lo = 0, hi = traj.length - 1
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1
-    if (new Date(traj[mid].timestamp).getTime() < now) lo = mid + 1
-    else hi = mid
-  }
-  useMissionStore.getState().setMissionTime(lo)
+  useMissionStore.getState().goLive()
 }
 
 export default function App() {
@@ -95,7 +78,7 @@ export default function App() {
         display: 'flex',
         flexDirection: 'column',
         padding: isMobile
-          ? '0.75rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom)) 0.75rem'
+          ? '0.5rem 0.75rem calc(1rem + env(safe-area-inset-bottom)) 0.75rem'
           : '1.5rem',
         boxSizing: 'border-box'
       }}>
@@ -111,7 +94,7 @@ export default function App() {
               marginBottom: '0.25rem',
             }}>
               <TelemetryStrip />
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
                 <MissionIdentity />
                 <MissionElapsed />
               </div>
