@@ -4,8 +4,8 @@ import { useIsMobile } from '../../hooks/useIsMobile'
 
 // Phase thresholds mapped to the 3212-point real OEM trajectory
 function getPhase(idx: number): string {
-  if (idx < 325)  return 'OUTBOUND'
-  if (idx < 400)  return 'EARTH PASS'
+  if (idx < 325) return 'OUTBOUND'
+  if (idx < 400) return 'EARTH PASS'
   if (idx < 1115) return 'T-CRUISE'
   if (idx < 1757) return 'LUNAR APPROACH'
   if (idx < 2416) return 'LUNAR FLYBY'
@@ -56,11 +56,11 @@ export default function TelemetryStrip() {
   // On mobile: drop JPL UPDATED row to keep it compact
   const metrics = [
     { label: 'DIST. EARTH', value: `${distEarth.toLocaleString()} km` },
-    { label: 'DIST. MOON',  value: `${distMoon.toLocaleString()} km` },
-    { label: 'VELOCITY',    value: `${velocity.toFixed(2)} km/s` },
-    { label: 'STATUS',      value: status },
+    { label: 'DIST. MOON', value: `${distMoon.toLocaleString()} km` },
+    { label: 'VELOCITY', value: `${velocity.toFixed(2)} km/s` },
+    { label: 'STATUS', value: status },
     ...(!isMobile ? [
-      { label: 'PHASE',       value: getPhase(currentMissionTime) },
+      { label: 'PHASE', value: getPhase(currentMissionTime) },
       { label: 'JPL UPDATED', value: updatedLabel },
     ] : []),
   ]

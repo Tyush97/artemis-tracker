@@ -5,16 +5,17 @@ import * as THREE from 'three'
 import { useMissionStore } from '../store/missionStore'
 import OrionModel from './OrionModel'
 import {
-  missionCurve, LAST,
+  missionCurve, idxToT,
   EARTH_R, MOON_R, MOON_POS,
 } from '../data/missionCurve'
 
-const CURVE_PTS = missionCurve.getPoints(300)
+// 2000 samples gives ~200 pts around the tight Earth slingshot vs 30 before
+const CURVE_PTS = missionCurve.getPoints(2000)
 
-// Compute orbital plane: use two well-separated arc positions and cross them.
-// CURVE_PTS[30] = early arc, CURVE_PTS[220] = approaching flyby.
-const _op1 = CURVE_PTS[30].clone()
-const _op2 = CURVE_PTS[220].clone()
+// Compute orbital plane: use two well-separated OEM-arc positions.
+// With 2000 pts, [200] ≈ OEM early outbound, [1400] ≈ post-flyby return.
+const _op1 = CURVE_PTS[200].clone()
+const _op2 = CURVE_PTS[1400].clone()
 const ORBITAL_NORMAL = new THREE.Vector3().crossVectors(_op1, _op2).normalize()
 if (ORBITAL_NORMAL.y < 0) ORBITAL_NORMAL.negate()
 // Quaternion that rotates the ring group's local Y-up into the orbital plane normal
@@ -253,7 +254,7 @@ function MoonSphere() {
 function TrajectoryLine() {
   const idx = useMissionStore(s => s.currentMissionTime)
 
-  const splitIdx  = Math.round((idx / LAST) * (CURVE_PTS.length - 1))
+  const splitIdx  = Math.round(idxToT(idx) * (CURVE_PTS.length - 1))
   const pastPts   = useMemo(() => CURVE_PTS.slice(0, Math.max(splitIdx + 1, 2)), [splitIdx])
   const futurePts = useMemo(() => CURVE_PTS.slice(Math.max(splitIdx, 0)), [splitIdx])
 
@@ -287,7 +288,7 @@ function CameraController({ controlsRef, animatingRef }: { controlsRef: Controls
     if (!controlsRef.current) return
 
     const { cameraMode, zoomLevel, setZoomLevel, currentMissionTime } = useMissionStore.getState()
-    const t = currentMissionTime / LAST
+    const t = idxToT(currentMissionTime)
     missionCurve.getPoint(t, shipPos.current)
 
     // ── Mode transition: kick off animation ───────────

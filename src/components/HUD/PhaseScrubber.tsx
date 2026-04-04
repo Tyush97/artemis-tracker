@@ -2,17 +2,19 @@ import { useEffect, useRef, useState } from 'react'
 import { useMissionStore } from '../../store/missionStore'
 import trajectory from '../../data/trajectory.json'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { LAUNCH_N, idxToT } from '../../data/missionCurve'
 
 const LAST = trajectory.length - 1  // 3211
 
-// Phase tick marks mapped to the 3212-point real OEM trajectory
+// Phase tick marks — OEM indices plus liftoff at -LAUNCH_N
 const PHASES = [
-  { idx: 0,    label: 'DEPART' },
-  { idx: 325,  label: 'EARTH PASS' },
-  { idx: 1115, label: 'LUNAR SOI' },
-  { idx: 1757, label: 'FLYBY' },
-  { idx: 2416, label: 'RETURN' },
-  { idx: 3180, label: 'REENTRY' },
+  { idx: -LAUNCH_N, label: 'LIFTOFF' },
+  { idx: 0,         label: 'OEM START' },
+  { idx: 325,       label: 'EARTH PASS' },
+  { idx: 1115,      label: 'LUNAR SOI' },
+  { idx: 1757,      label: 'FLYBY' },
+  { idx: 2416,      label: 'RETURN' },
+  { idx: 3180,      label: 'REENTRY' },
 ]
 
 export default function PhaseScrubber() {
@@ -47,8 +49,8 @@ export default function PhaseScrubber() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [isPlaying, tick])
 
-  const progressPercent = (currentMissionTime / LAST) * 100
-  const livePercent = (liveIdx / LAST) * 100
+  const progressPercent = idxToT(currentMissionTime) * 100
+  const livePercent     = idxToT(liveIdx) * 100
 
   return (
     <div style={{
@@ -108,7 +110,7 @@ export default function PhaseScrubber() {
           )}
         </button>
 
-        <div style={{ flex: 1, position: 'relative', height: '3.75rem', display: 'flex', alignItems: 'center' }}>
+        <div style={{ flex: 1, position: 'relative', height: isMobile ? '2rem' : '3.75rem', display: 'flex', alignItems: 'center' }}>
           {/* Background Track (Full Journey) */}
           <div style={{ position: 'absolute', width: '100%', height: '1px', background: '#222' }} />
           
@@ -149,7 +151,7 @@ export default function PhaseScrubber() {
           {PHASES.map((p, i) => (
             <div key={i} style={{
               position: 'absolute',
-              left: `${(p.idx / LAST) * 100}%`,
+              left: `${idxToT(p.idx) * 100}%`,
               top: '50%',
               transform: 'translate(-50%, -50%)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem'
@@ -175,8 +177,8 @@ export default function PhaseScrubber() {
             style={{
               position: 'absolute',
               right: isMobile ? '0' : '-4.5rem',
-              top: isMobile ? '-1.4rem' : '50%',
-              transform: isMobile ? 'none' : 'translate(0%, -50%)',
+              top: isMobile ? '50%' : '50%',
+              transform: isMobile ? 'translate(0, -50%)' : 'translate(0%, -50%)',
               cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: '0.4rem',
               padding: '3px 6px',
@@ -201,9 +203,9 @@ export default function PhaseScrubber() {
           </div>
 
           <input
-            type="range" 
-            min={0} 
-            max={LAST} // Keep full scale for correct mapping
+            type="range"
+            min={-LAUNCH_N}
+            max={LAST}
             value={currentMissionTime}
             onChange={(e) => { 
               const val = Number(e.target.value);

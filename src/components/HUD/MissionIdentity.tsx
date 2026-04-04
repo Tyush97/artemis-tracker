@@ -28,20 +28,20 @@ export default function MissionIdentity() {
     <div style={{
       color: '#ffffff',
       fontFamily: 'monospace',
-      textAlign: 'center',
+      textAlign: isMobile ? 'right' : 'center',
       display: 'flex',
       flexDirection: 'column',
-      alignItems: 'center',
+      alignItems: isMobile ? 'flex-end' : 'center',
       gap: '0.25rem',
       pointerEvents: 'auto',
     }}>
       {/* Mission name */}
-      <span style={{ fontSize: isMobile ? '0.9rem' : '1.5rem', letterSpacing: '0.15rem', fontWeight: 300 }}>
-        Artemis II - Integrity
+      <span style={{ fontSize: isMobile ? '0.8rem' : '1.5rem', letterSpacing: '0.1rem', fontWeight: 300 }}>
+        Artemis II — Integrity
       </span>
 
       {/* Phase */}
-      <span style={{ fontSize: isMobile ? '0.55rem' : '0.75rem', color: '#888', letterSpacing: '0.125rem' }}>
+      <span style={{ fontSize: isMobile ? '0.5rem' : '0.75rem', color: '#888', letterSpacing: '0.1rem' }}>
         Phase - {getPhase(currentMissionTime)}
         {isLive && (
           <span style={{
