@@ -68,7 +68,7 @@ export default function TelemetryStrip() {
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+      gridTemplateColumns: isMobile ? 'repeat(1fr)' : 'repeat(3, 1fr)',
       gap: isMobile ? '0.4rem 0.75rem' : '0.625rem 1.25rem',
       color: '#ffffff',
       fontFamily: 'monospace',
