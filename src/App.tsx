@@ -62,7 +62,7 @@ export default function App() {
   return (
     <div style={{
       width: '100vw',
-      height: '100vh',
+      height: '100dvh',
       background: '#000000',
       position: 'relative',
       overflow: 'hidden',
