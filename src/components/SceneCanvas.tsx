@@ -133,7 +133,7 @@ function RangeRings() {
             <Html
               position={[LABEL_DIR.x * r, 0, LABEL_DIR.z * r]}
               center
-              zIndexRange={[100, 100]}
+              zIndexRange={isHovered ? [1000, 1000] : [100, 100]}
               style={{ pointerEvents: 'auto' }}
             >
               <div
@@ -278,7 +278,7 @@ type ControlsRef = React.MutableRefObject<{
 const ZOOM_MIN_DIST = 5
 const ZOOM_MAX_DIST = 1400
 
-function CameraController({ controlsRef, animatingRef }: { controlsRef: ControlsRef; animatingRef: React.MutableRefObject<boolean> }) {
+function CameraController({ controlsRef, animatingRef, skipNextAnimRef }: { controlsRef: ControlsRef; animatingRef: React.MutableRefObject<boolean>; skipNextAnimRef: React.MutableRefObject<boolean> }) {
   const { camera } = useThree()
   const shipPos = useRef(new THREE.Vector3())
   const prevMode = useRef('')
@@ -294,14 +294,19 @@ function CameraController({ controlsRef, animatingRef }: { controlsRef: Controls
     // ── Mode transition: kick off animation ───────────
     if (cameraMode !== prevMode.current) {
       prevMode.current = cameraMode
-      animatingRef.current = true
-      if (cameraMode !== 'topdown') camera.up.set(0, 1, 0)
+      if (skipNextAnimRef.current) {
+        skipNextAnimRef.current = false
+        animatingRef.current = false
+      } else {
+        animatingRef.current = true
+      }
+      // Always keep up=(0,1,0) — flipping it causes OrbitControls to jump on restore
+      camera.up.set(0, 1, 0)
     }
 
     // ── Transition animation (topdown / perspective) ───
     if (animatingRef.current && (cameraMode === 'topdown' || cameraMode === 'perspective')) {
       const targetPos = cameraMode === 'topdown' ? TOPDOWN_CAM_POS : PERSP_CAM_POS
-      if (cameraMode === 'topdown') camera.up.set(0, 0, -1)
 
       const alpha = 1 - Math.pow(0.005, delta)
       camera.position.lerp(targetPos, alpha)
@@ -325,10 +330,19 @@ function CameraController({ controlsRef, animatingRef }: { controlsRef: Controls
       const targetCamPos = shipPos.current.clone()
         .addScaledVector(tangent, -SHIP_BACK_DIST)
         .addScaledVector(up, SHIP_UP_OFFSET)
+
+      // When mobile drawer is open, shift the look-target downward in world space
+      // so the ship renders in the upper half of the full-screen canvas
+      const { mobileDrawerOpen } = useMissionStore.getState()
+      const drawerOffset = new THREE.Vector3(0, -6, 0)
+      const lookTarget = mobileDrawerOpen
+        ? shipPos.current.clone().add(drawerOffset)
+        : shipPos.current.clone()
+
       if (animatingRef.current) {
         const alpha = 1 - Math.pow(0.005, delta)
         camera.position.lerp(targetCamPos, alpha)
-        controlsRef.current.target.lerp(shipPos.current, alpha)
+        controlsRef.current.target.lerp(lookTarget, alpha)
         controlsRef.current.update()
         if (camera.position.distanceTo(targetCamPos) < 2) {
           animatingRef.current = false
@@ -338,7 +352,7 @@ function CameraController({ controlsRef, animatingRef }: { controlsRef: Controls
       }
       // Non-animating: follow ship, then fall through to zoom sync below
       const prevTarget = controlsRef.current.target.clone()
-      controlsRef.current.target.lerp(shipPos.current, Math.min(delta * 4, 0.15))
+      controlsRef.current.target.lerp(lookTarget, Math.min(delta * 4, 0.15))
       const d = controlsRef.current.target.clone().sub(prevTarget)
       camera.position.add(d)
       controlsRef.current.update()
@@ -374,33 +388,15 @@ function CameraController({ controlsRef, animatingRef }: { controlsRef: Controls
 export default function SceneCanvas() {
   const controlsRef = useRef<{ target: THREE.Vector3; update: () => void } | null>(null)
   const animatingRef = useRef(false)
-  const { controlMode, cameraMode, setCameraMode } = useMissionStore()
-  const dragStartPos = useRef<{ x: number; y: number } | null>(null)
+  const skipNextAnimRef = useRef(false)
+  const { controlMode, cameraMode } = useMissionStore()
 
   const cursorStyle = controlMode === 'pan' ? 'grab' : 'auto'
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    // Abort any in-progress transition so the camera doesn't snap back
+  const handlePointerDown = () => {
     if (animatingRef.current) {
       animatingRef.current = false
     }
-    dragStartPos.current = { x: e.clientX, y: e.clientY }
-  }
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!dragStartPos.current) return
-    // Only switch topdown→perspective on rotate drag, not pan
-    if (useMissionStore.getState().controlMode !== 'rotate') return
-    const dx = e.clientX - dragStartPos.current.x
-    const dy = e.clientY - dragStartPos.current.y
-    if (Math.sqrt(dx * dx + dy * dy) > 8 && useMissionStore.getState().cameraMode === 'topdown') {
-      setCameraMode('perspective')
-      dragStartPos.current = null
-    }
-  }
-
-  const handlePointerUp = () => {
-    dragStartPos.current = null
   }
 
   // Suppress unused warning — cameraMode read for reactivity
@@ -410,8 +406,6 @@ export default function SceneCanvas() {
     <Canvas
       camera={{ position: [200, 500, 600], fov: 45, near: 0.1, far: 12000 }}
       onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
       style={{ position: 'absolute', inset: 0, background: '#000', cursor: cursorStyle, zIndex: 0 }}
     >
@@ -428,7 +422,7 @@ export default function SceneCanvas() {
         <OrionModel />
       </Suspense>
 
-      <CameraController controlsRef={controlsRef} animatingRef={animatingRef} />
+      <CameraController controlsRef={controlsRef} animatingRef={animatingRef} skipNextAnimRef={skipNextAnimRef} />
       <OrbitControls
         ref={controlsRef as React.MutableRefObject<any>}
         enablePan

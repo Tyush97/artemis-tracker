@@ -4,6 +4,7 @@ import { fetchMissionEvents, type SpaceDevsEntry } from '../../lib/fetchMissionE
 import { useMissionStore } from '../../store/missionStore'
 import trajectoryData from '../../data/trajectory.json'
 import { LAUNCH_N } from '../../data/missionCurve'
+import { C, FS, LS } from '../../design/tokens'
 
 type FeedEntry = (BlogEntry | SpaceDevsEntry) & { critical?: boolean; trajectoryIdx: number }
 
@@ -115,12 +116,12 @@ export default function EventTimeline({ onEventClick, fullWidth = false }: { onE
       {/* Header — hidden in fullWidth mode (drawer has its own header) */}
       {!fullWidth && (
         <div style={{
-          fontSize: '0.5rem',
-          color: '#444',
-          letterSpacing: '0.18rem',
+          fontSize: FS.xs,
+          color: C.muted,
+          letterSpacing: LS.wide,
           textAlign: 'right',
           paddingBottom: '0.625rem',
-          borderBottom: '1px solid #1a1a1a',
+          borderBottom: `1px solid ${C.border}`,
           marginBottom: '0.75rem',
           flexShrink: 0,
         }}>
@@ -139,12 +140,13 @@ export default function EventTimeline({ onEventClick, fullWidth = false }: { onE
             flexDirection: 'column',
             gap: '0',
             paddingBottom: '5rem',
+            paddingLeft: fullWidth ? '1.25rem' : '0',
           }}
         >
           {loading && (
             <div style={{
-              fontSize: '0.5rem',
-              color: '#555',
+              fontSize: FS.xs,
+              color: C.muted,
               textAlign: 'right',
               paddingRight: '0.75rem',
               paddingTop: '1rem',
@@ -155,8 +157,8 @@ export default function EventTimeline({ onEventClick, fullWidth = false }: { onE
 
           {!loading && feed.length === 0 && (
             <div style={{
-              fontSize: '0.5rem',
-              color: '#555',
+              fontSize: FS.xs,
+              color: C.muted,
               textAlign: 'right',
               paddingRight: '0.75rem',
               paddingTop: '1rem',
@@ -177,7 +179,7 @@ export default function EventTimeline({ onEventClick, fullWidth = false }: { onE
                   cursor: 'pointer',
                   paddingBottom: '1rem',
                   marginBottom: '1rem',
-                  borderBottom: '1px solid #141414',
+                  borderBottom: `1px solid ${C.border}`,
                   opacity: isActive ? 1 : 0.45,
                   transition: 'opacity 0.3s',
                 }}
@@ -193,22 +195,22 @@ export default function EventTimeline({ onEventClick, fullWidth = false }: { onE
                   {isLatest && (
                     <span style={{
                       width: '0.35rem', height: '0.35rem',
-                      backgroundColor: '#ff3333',
+                      backgroundColor: C.live,
                       borderRadius: '50%',
                       animation: 'pulse 1s infinite',
                       flexShrink: 0,
                     }} />
                   )}
-                  <span style={{ fontSize: '0.5rem', color: '#666', letterSpacing: '0.08rem' }}>
+                  <span style={{ fontSize: FS.xs, color: C.muted, letterSpacing: LS.normal }}>
                     {formatMet(entry.publishedUtc)}
                   </span>
                 </div>
 
                 {/* UTC timestamp */}
                 <div style={{
-                  fontSize: '0.45rem',
-                  color: '#3a3a3a',
-                  letterSpacing: '0.06rem',
+                  fontSize: FS.xs,
+                  color: C.ghost,
+                  letterSpacing: LS.tight,
                   textAlign: 'right',
                   marginBottom: '0.3rem',
                 }}>
@@ -222,18 +224,18 @@ export default function EventTimeline({ onEventClick, fullWidth = false }: { onE
                   justifyContent: 'flex-end',
                   gap: '0.35rem',
                   marginBottom: '0.4rem',
-                  paddingRight: '0.75rem',
-                  borderRight: isActive ? '2px solid #fff' : '1px solid #2a2a2a',
+                  paddingRight: fullWidth ? '1.25rem' : '0.75rem',
+                  borderRight: isActive ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
                 }}>
                   {entry.critical && (
                     <span style={{
-                      fontSize: '0.4rem',
+                      fontSize: FS.xs,
                       backgroundColor: '#b8860b',
                       color: '#000',
                       padding: '0.08rem 0.3rem',
                       borderRadius: '2px',
                       fontWeight: 700,
-                      letterSpacing: '0.06rem',
+                      letterSpacing: LS.tight,
                       flexShrink: 0,
                       lineHeight: '1.4',
                     }}>
@@ -241,9 +243,9 @@ export default function EventTimeline({ onEventClick, fullWidth = false }: { onE
                     </span>
                   )}
                   <span style={{
-                    fontSize: '0.625rem',
-                    color: isActive ? '#fff' : '#aaa',
-                    letterSpacing: '0.1rem',
+                    fontSize: FS.sm,
+                    color: isActive ? C.primary : '#aaa',
+                    letterSpacing: LS.normal,
                     fontWeight: isActive ? 700 : 400,
                     textAlign: 'right',
                     lineHeight: '1.3',
@@ -256,11 +258,11 @@ export default function EventTimeline({ onEventClick, fullWidth = false }: { onE
                 {/* Description — show for active entry and 2 below it */}
                 {i < 3 && entry.description && (
                   <div style={{
-                    fontSize: '0.5625rem',
-                    color: isActive ? '#888' : '#444',
+                    fontSize: FS.sm,
+                    color: isActive ? C.secondary : C.ghost,
                     lineHeight: '1.6',
                     textAlign: 'right',
-                    paddingRight: '0.75rem',
+                    paddingRight: fullWidth ? '1.25rem' : '0.75rem',
                   }}>
                     {entry.description}
                   </div>
@@ -268,12 +270,12 @@ export default function EventTimeline({ onEventClick, fullWidth = false }: { onE
 
                 {/* Source badge */}
                 <div style={{
-                  fontSize: '0.375rem',
-                  color: '#333',
+                  fontSize: FS.xs,
+                  color: C.ghost,
                   textAlign: 'right',
-                  paddingRight: '0.75rem',
+                  paddingRight: fullWidth ? '1.25rem' : '0.75rem',
                   marginTop: '0.25rem',
-                  letterSpacing: '0.06rem',
+                  letterSpacing: LS.tight,
                 }}>
                   {SOURCE_LABELS[entry.source]}
                 </div>

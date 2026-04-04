@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import trajectory from '../../data/trajectory.json'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { C, FS, LS } from '../../design/tokens'
 
 const LAUNCH_MS = new Date(trajectory[0].timestamp + 'Z').getTime()
 
@@ -26,13 +27,13 @@ export default function MissionElapsed() {
   if (isMobile) {
     return (
       <div style={{ fontFamily: 'monospace', textAlign: 'right', pointerEvents: 'auto' }}>
-        <div style={{ fontSize: '0.45rem', color: '#555', letterSpacing: '0.08rem', marginBottom: '0.25rem' }}>
+        <div style={{ fontSize: FS.xs, color: C.muted, letterSpacing: LS.normal, marginBottom: '0.25rem' }}>
           MISSION ELAPSED
         </div>
-        <div style={{ fontSize: '0.65rem', color: '#fff', letterSpacing: '0.04rem' }}>
+        <div style={{ fontSize: FS.md, color: C.primary, letterSpacing: LS.tight }}>
           {`D${days + 1} T+${String(hours).padStart(2, '0')}h${String(mins).padStart(2, '0')}m${String(secs).padStart(2, '0')}s`}
         </div>
-        <div style={{ fontSize: '0.45rem', color: '#555', letterSpacing: '0.04rem', marginTop: '0.25rem' }}>
+        <div style={{ fontSize: FS.xs, color: C.muted, letterSpacing: LS.tight, marginTop: '0.25rem' }}>
           {utcTime}
         </div>
       </div>
@@ -41,16 +42,16 @@ export default function MissionElapsed() {
 
   return (
     <div style={{ fontFamily: 'monospace', textAlign: 'right', pointerEvents: 'auto' }}>
-      <div style={{ fontSize: '0.5rem', color: '#555', letterSpacing: '0.1rem', marginBottom: '0.2rem' }}>
+      <div style={{ fontSize: FS.xs, color: C.muted, letterSpacing: LS.normal, marginBottom: '0.2rem' }}>
         MISSION ELAPSED
       </div>
-      <div style={{ fontSize: '0.9rem', color: '#fff', letterSpacing: '0.08rem' }}>
+      <div style={{ fontSize: FS.display, color: C.primary, letterSpacing: LS.tight }}>
         {`DAY ${days + 1} — T+${String(hours).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`}
       </div>
-      <div style={{ fontSize: '0.5rem', color: '#555', letterSpacing: '0.06rem', marginTop: '0.25rem' }}>
+      <div style={{ fontSize: FS.xs, color: C.muted, letterSpacing: LS.tight, marginTop: '0.25rem' }}>
         {utcDate}
       </div>
-      <div style={{ fontSize: '0.55rem', color: '#666', letterSpacing: '0.06rem' }}>
+      <div style={{ fontSize: FS.xs, color: C.secondary, letterSpacing: LS.tight }}>
         {utcTime}
       </div>
     </div>

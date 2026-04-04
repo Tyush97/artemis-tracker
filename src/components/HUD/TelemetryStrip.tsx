@@ -1,6 +1,7 @@
 import { useMissionStore } from '../../store/missionStore'
 import { MOON_EME } from '../../data/missionCurve'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { C, FS, LS } from '../../design/tokens'
 
 // Phase thresholds mapped to the 3212-point real OEM trajectory
 function getPhase(idx: number): string {
@@ -68,9 +69,9 @@ export default function TelemetryStrip() {
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: isMobile ? 'repeat(1fr)' : 'repeat(3, 1fr)',
+      gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
       gap: isMobile ? '0.4rem 0.75rem' : '0.625rem 1.25rem',
-      color: '#ffffff',
+      color: C.primary,
       fontFamily: 'monospace',
       pointerEvents: 'auto',
     }}>
@@ -79,14 +80,14 @@ export default function TelemetryStrip() {
           display: 'flex',
           flexDirection: 'column',
           gap: '0.2rem',
-          borderLeft: m.label === 'STATUS' && status === 'LIVE' ? '1px solid #ff3333' : 'none',
+          borderLeft: m.label === 'STATUS' && status === 'LIVE' ? `1px solid ${C.live}` : 'none',
           paddingLeft: m.label === 'STATUS' && status === 'LIVE' ? '0.5rem' : '0'
         }}>
-          <div style={{ fontSize: '0.45rem', color: '#555', letterSpacing: '0.08rem' }}>{m.label}</div>
+          <div style={{ fontSize: FS.xs, color: C.muted, letterSpacing: LS.normal }}>{m.label}</div>
           <div style={{
-            fontSize: isMobile ? '0.65rem' : '0.8rem',
-            color: m.label === 'STATUS' && status === 'LIVE' ? '#ff3333' : '#fff',
-            letterSpacing: '0.04rem',
+            fontSize: isMobile ? FS.md : FS.lg,
+            color: m.label === 'STATUS' && status === 'LIVE' ? C.live : C.primary,
+            letterSpacing: LS.tight,
             fontWeight: m.label === 'STATUS' ? 'bold' : 'normal'
           }}>{m.value}</div>
         </div>

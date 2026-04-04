@@ -37,6 +37,7 @@ interface MissionState {
   cameraMode: 'topdown' | 'perspective' | 'ship'
   controlMode: 'pan' | 'rotate'
   zoomLevel: number
+  mobileDrawerOpen: boolean
 
   setMissionTime:  (index: number) => void
   setIsPlaying:    (playing: boolean) => void
@@ -44,6 +45,7 @@ interface MissionState {
   setCameraMode:   (mode: 'topdown' | 'perspective' | 'ship') => void
   setControlMode:  (mode: 'pan' | 'rotate') => void
   setZoomLevel:    (level: number) => void
+  setMobileDrawerOpen: (open: boolean) => void
   setTelemetry:    (data: TelemetryData) => void
   setActualTrajectory:     (vecs: StateVector[]) => void
   setActualCurrentVector:  (vec: StateVector) => void
@@ -69,6 +71,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   cameraMode:         'perspective',
   controlMode:        'rotate',
   zoomLevel:          50,
+  mobileDrawerOpen:   false,
 
   setMissionTime: (index) => {
     const realIdx = get().getRealTimeIndex()
@@ -111,6 +114,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   setCameraMode: (mode) => set({ cameraMode: mode }),
   setControlMode: (mode) => set({ controlMode: mode }),
   setZoomLevel: (level) => set({ zoomLevel: level }),
+  setMobileDrawerOpen: (open) => set({ mobileDrawerOpen: open }),
   setTelemetry: (data) => set({ telemetry: data }),
   setActualTrajectory: (vecs) => set({ actualTrajectory: vecs }),
   setActualCurrentVector: (vec) => set({ actualCurrentVector: vec, lastHorizonsUpdate: new Date() }),

@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { useMissionStore } from '../../store/missionStore'
+import { C } from '../../design/tokens'
 
 export const FeedIcon = ({ color }: { color: string }) => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -85,8 +86,8 @@ export default function HardwareControls({ horizontal = false, onFeedOpen }: { h
 
   const nudgeStyle: React.CSSProperties = {
     background: 'transparent',
-    border: '1px solid #444',
-    color: '#666',
+    border: `1px solid ${C.btnBorder}`,
+    color: C.btnIcon,
     width: '2.5rem',
     height: '2.5rem',
     display: 'flex',
@@ -101,8 +102,8 @@ export default function HardwareControls({ horizontal = false, onFeedOpen }: { h
 
   // Shared square icon button style
   const sq = (active: boolean): React.CSSProperties => ({
-    background: active ? '#fff' : 'transparent',
-    border: '1px solid ' + (active ? '#fff' : '#444'),
+    background: active ? C.primary : 'transparent',
+    border: `1px solid ${active ? C.primary : C.btnBorder}`,
     width: '2.5rem',
     height: '2.5rem',
     display: 'flex',
@@ -116,31 +117,31 @@ export default function HardwareControls({ horizontal = false, onFeedOpen }: { h
   const buttons = (
     <>
       <button title="Pan" onClick={() => setControlMode('pan')} style={sq(controlMode === 'pan')}>
-        <HandIcon color={controlMode === 'pan' ? '#000' : '#666'} />
+        <HandIcon color={controlMode === 'pan' ? C.btnIconOn : C.btnIcon} />
       </button>
       <button title="Rotate / Orbit" onClick={() => setControlMode('rotate')} style={sq(controlMode === 'rotate')}>
-        <CursorIcon color={controlMode === 'rotate' ? '#000' : '#666'} />
+        <CursorIcon color={controlMode === 'rotate' ? C.btnIconOn : C.btnIcon} />
       </button>
       <button
         title="Sync to Ship"
         onClick={() => { setCameraMode('ship'); setControlMode('rotate'); }}
         style={sq(cameraMode === 'ship')}
       >
-        <TargetIcon color={cameraMode === 'ship' ? '#000' : '#666'} />
+        <TargetIcon color={cameraMode === 'ship' ? C.btnIconOn : C.btnIcon} />
       </button>
       <button
         title="Top-Down View"
         onClick={() => setCameraMode('topdown')}
         style={sq(cameraMode === 'topdown')}
       >
-        <TopDownIcon color={cameraMode === 'topdown' ? '#000' : '#666'} />
+        <TopDownIcon color={cameraMode === 'topdown' ? C.btnIconOn : C.btnIcon} />
       </button>
       <button
         title="3D Perspective"
         onClick={() => setCameraMode('perspective')}
         style={sq(cameraMode === 'perspective')}
       >
-        <CubeIcon color={cameraMode === 'perspective' ? '#000' : '#666'} />
+        <CubeIcon color={cameraMode === 'perspective' ? C.btnIconOn : C.btnIcon} />
       </button>
     </>
   )
@@ -157,7 +158,7 @@ export default function HardwareControls({ horizontal = false, onFeedOpen }: { h
         {buttons}
         {onFeedOpen && (
           <button title="Live Updates" onClick={onFeedOpen} style={sq(false)}>
-            <FeedIcon color="#666" />
+            <FeedIcon color={C.btnIcon} />
           </button>
         )}
       </div>
@@ -194,8 +195,8 @@ export default function HardwareControls({ horizontal = false, onFeedOpen }: { h
             justifyContent: 'center',
           }}
         >
-          <div style={{ width: '1px', height: '100%', background: '#333' }} />
-          <div style={{ position: 'absolute', bottom: 0, width: '1px', height: `${zoomLevel}%`, background: '#888' }} />
+          <div style={{ width: '1px', height: '100%', background: C.btnBorder }} />
+          <div style={{ position: 'absolute', bottom: 0, width: '1px', height: `${zoomLevel}%`, background: C.secondary }} />
           <div style={{
             position: 'absolute',
             bottom: `${zoomLevel}%`,

@@ -1,6 +1,7 @@
 import { useMissionStore } from '../../store/missionStore'
 import trajectory from '../../data/trajectory.json'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { C, FS, LS } from '../../design/tokens'
 
 const LAST_IDX = trajectory.length - 1  // 3211
 
@@ -26,7 +27,7 @@ export default function MissionIdentity() {
 
   return (
     <div style={{
-      color: '#ffffff',
+      color: C.primary,
       fontFamily: 'monospace',
       textAlign: isMobile ? 'right' : 'center',
       display: 'flex',
@@ -36,18 +37,18 @@ export default function MissionIdentity() {
       pointerEvents: 'auto',
     }}>
       {/* Mission name */}
-      <span style={{ fontSize: isMobile ? '1.25rem' : '1.5rem', letterSpacing: '0.1rem', fontWeight: 300 }}>
+      <span style={{ fontSize: isMobile ? FS.xl : FS.xxl, letterSpacing: LS.normal, fontWeight: 300 }}>
         Artemis II — Integrity
       </span>
 
       {/* Phase */}
-      <span style={{ fontSize: isMobile ? '0.75rem' : '0.75rem', color: '#888', letterSpacing: '0.1rem' }}>
+      <span style={{ fontSize: FS.md, color: C.secondary, letterSpacing: LS.normal }}>
         Phase - {getPhase(currentMissionTime)}
         {isLive && (
           <span style={{
             display: 'inline-block',
             width: '0.4rem', height: '0.4rem',
-            backgroundColor: '#ff3333',
+            backgroundColor: C.live,
             borderRadius: '50%',
             animation: 'pulse 1s infinite',
             marginLeft: '0.5rem',

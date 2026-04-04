@@ -33,6 +33,7 @@ export default function App() {
     return () => clearInterval(id)
   }, [])
 
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space' && e.target === document.body) {
@@ -80,7 +81,7 @@ export default function App() {
         display: 'flex',
         flexDirection: 'column',
         padding: isMobile
-          ? '0.5rem 0.75rem calc(1rem + env(safe-area-inset-bottom)) 0.75rem'
+          ? '0.875rem 1rem calc(1.25rem + env(safe-area-inset-bottom)) 1rem'
           : '1.5rem',
         boxSizing: 'border-box'
       }}>
@@ -93,25 +94,28 @@ export default function App() {
               alignItems: 'flex-start',
               width: '100%',
               pointerEvents: 'auto',
-              marginBottom: '0.25rem',
+              gap: '1rem',
             }}>
               <TelemetryStrip />
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', flexShrink: 0 }}>
                 <MissionIdentity />
                 <MissionElapsed />
               </div>
             </div>
 
-            {/* MOBILE MID: space for 3D scene */}
+            {/* MOBILE MID: space for 3D scene — ship fills this area */}
             <div style={{ flex: 1 }} />
 
             {/* MOBILE BOTTOM: scrubber then camera buttons */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', width: '100%', pointerEvents: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', width: '100%', pointerEvents: 'auto' }}>
               <PhaseScrubber />
-              <HardwareControls horizontal onFeedOpen={() => setFeedOpen(true)} />
+              <HardwareControls horizontal onFeedOpen={() => {
+                useMissionStore.getState().setCameraMode('ship')
+                useMissionStore.getState().setMobileDrawerOpen(true)
+                setFeedOpen(true)
+              }} />
             </div>
 
-            <EventDrawer open={feedOpen} onClose={() => setFeedOpen(false)} />
           </>
         ) : (
           <>
@@ -156,6 +160,18 @@ export default function App() {
           </>
         )}
       </div>
+
+      {/* EventDrawer outside HUD shell so it inherits pointerEvents correctly */}
+      {isMobile && (
+        <EventDrawer
+          open={feedOpen}
+          onClose={() => {
+            setFeedOpen(false)
+            useMissionStore.getState().setMobileDrawerOpen(false)
+            useMissionStore.getState().setCameraMode('topdown')
+          }}
+        />
+      )}
     </div>
   )
 }

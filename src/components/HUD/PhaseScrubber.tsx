@@ -3,6 +3,7 @@ import { useMissionStore } from '../../store/missionStore'
 import trajectory from '../../data/trajectory.json'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { LAUNCH_N, idxToT } from '../../data/missionCurve'
+import { C, FS, LS } from '../../design/tokens'
 
 const LAST = trajectory.length - 1  // 3211
 
@@ -76,9 +77,9 @@ export default function PhaseScrubber() {
       `}</style>
       
       <div style={{
-        fontSize: '0.5625rem',
-        color: '#555',
-        letterSpacing: '0.15rem',
+        fontSize: FS.xs,
+        color: C.muted,
+        letterSpacing: LS.wide,
         textAlign: 'center',
         marginBottom: '0.5rem',
       }}>
@@ -91,7 +92,7 @@ export default function PhaseScrubber() {
           style={{
             background: 'transparent',
             border: 'none',
-            color: '#fff',
+            color: C.primary,
             cursor: 'pointer',
             padding: 0,
             display: 'flex',
@@ -125,13 +126,13 @@ export default function PhaseScrubber() {
           }} />
 
           {/* Current Progress Track */}
-          <div style={{ 
-            position: 'absolute', 
+          <div style={{
+            position: 'absolute',
             left: 0,
-            width: `${progressPercent}%`, 
-            height: '1px', 
-            background: isCurrentlyLive ? '#ff3333' : '#fff',
-            boxShadow: isCurrentlyLive ? '0 0 8px #ff3333' : 'none',
+            width: `${progressPercent}%`,
+            height: '1px',
+            background: isCurrentlyLive ? C.live : C.primary,
+            boxShadow: isCurrentlyLive ? `0 0 8px ${C.live}` : 'none',
             transition: 'background 0.3s ease'
           }} />
 
@@ -156,14 +157,14 @@ export default function PhaseScrubber() {
               transform: 'translate(-50%, -50%)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem'
             }}>
-              <div style={{ width: '1px', height: '0.625rem', background: p.idx <= liveIdx ? '#444' : '#222' }} />
+              <div style={{ width: '1px', height: '0.625rem', background: p.idx <= liveIdx ? C.btnBorder : C.border }} />
               {!isMobile && (
                 <div style={{
                   position: 'absolute',
                   top: '0.9375rem',
-                  fontSize: '0.5rem',
-                  color: p.idx <= liveIdx ? '#777' : '#333',
-                  letterSpacing: '0.06rem',
+                  fontSize: FS.xs,
+                  color: p.idx <= liveIdx ? C.muted : C.ghost,
+                  letterSpacing: LS.tight,
                   whiteSpace: 'nowrap'
                 }}>
                   {p.label}
@@ -183,19 +184,19 @@ export default function PhaseScrubber() {
               display: 'flex', alignItems: 'center', gap: '0.4rem',
               padding: '3px 6px',
               borderRadius: '4px',
-              background: isCurrentlyLive ? 'rgba(255, 51, 51, 0.1)' : 'transparent',
+              background: isCurrentlyLive ? 'rgba(255,51,51,0.1)' : 'transparent',
               transition: 'all 0.3s ease'
             }}>
             <div style={{
               width: '0.35rem', height: '0.35rem',
-              background: isCurrentlyLive ? '#ff3333' : '#333',
+              background: isCurrentlyLive ? C.live : C.btnBorder,
               borderRadius: '50%',
-              boxShadow: isCurrentlyLive ? '0 0 10px #ff3333' : 'none'
+              boxShadow: isCurrentlyLive ? `0 0 10px ${C.live}` : 'none'
             }} />
             <div style={{
-              fontSize: '0.55rem',
-              color: isCurrentlyLive ? '#fff' : '#444',
-              letterSpacing: '0.125rem',
+              fontSize: FS.xs,
+              color: isCurrentlyLive ? C.primary : C.ghost,
+              letterSpacing: LS.wide,
               fontWeight: isCurrentlyLive ? 'bold' : 'normal'
             }}>
               LIVE
