@@ -3,12 +3,20 @@
 ## Project Overview
 A high-fidelity, live mission tracking dashboard for NASA's Artemis II 10-day crewed lunar flyby mission. Integrates real-world NASA OEM trajectory data (3,212 points) with live JPL Horizons telemetry via serverless proxies. Displays a 3D interactive spacecraft chevron alongside real-time mission telemetry, timeline, and event data.
 
+## Mission Status
+**Artemis II has launched (as of April 2026).** The mission is live/in-progress. `isLive` will be `true` for users visiting the tracker.
+
+### Live Telemetry Architecture
+- **JPL Horizons** (`/api/horizons-proxy`) is the sole live data source. It returns geocentric EME2000 state vectors (x, y, z, vx, vy, vz in km / km/s) which `TelemetryStrip` uses to compute distance-to-Earth, distance-to-Moon, and velocity magnitude directly.
+- **`nasa.gov/trackartemis`** is a Unity WebGL 3D visualization — not a JSON API. It cannot be parsed for telemetry data. The `useARTOWTelemetry` hook and `/api/nasa-proxy` have been removed as dead code.
+- `TelemetryData`, `telemetry`, and `setTelemetry` have been removed from the store — all live metrics come from `actualCurrentVector` (Horizons).
+
 ## Tech Stack
 - **Framework**: React 18 + TypeScript (strict mode)
 - **Build tool**: Vite
 - **3D rendering**: React Three Fiber (R3F) + Three.js
 - **State management**: Zustand (`useMissionStore`)
-- **Backend/Proxies**: Vercel Serverless Functions (`/api/horizons-proxy`, `/api/nasa-proxy`)
+- **Backend/Proxies**: Vercel Serverless Functions (`/api/horizons-proxy`)
 - **Deployment**: Vercel (Production)
 
 ## Project Structure
@@ -30,8 +38,7 @@ src/
   store/
     missionStore.ts        # Zustand: currentMissionTime, isLive, actualTrajectory, etc.
   hooks/
-    useHorizonsTelemetry.ts # Periodic JPL Horizons polling
-    useARTOWTelemetry.ts    # NASA trackartemis polling
+    useHorizonsTelemetry.ts # Periodic JPL Horizons polling (sole live data source)
     useIsMobile.ts          # Returns true when viewport < 640px
   data/
     trajectory.json        # 3,212-point high-fidelity mission plan

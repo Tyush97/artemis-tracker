@@ -8,13 +8,13 @@ import EventTimeline from './components/HUD/EventTimeline'
 import EventDrawer from './components/HUD/EventDrawer'
 import PhaseScrubber from './components/HUD/PhaseScrubber'
 import { useMissionStore } from './store/missionStore'
-import { useARTOWTelemetry } from './hooks/useARTOWTelemetry'
 import { useHorizonsTelemetry } from './hooks/useHorizonsTelemetry'
 import { useIsMobile } from './hooks/useIsMobile'
 import './index.css'
 
 function syncToRealTime() {
-  useMissionStore.getState().goLive()
+  const { isLive, goLive } = useMissionStore.getState()
+  if (isLive) goLive()
 }
 
 export default function App() {
@@ -22,8 +22,7 @@ export default function App() {
   const isMobile = useIsMobile()
   const [feedOpen, setFeedOpen] = useState(false)
 
-  // Mount telemetry polling hooks
-  useARTOWTelemetry()
+  // Mount telemetry polling hook
   useHorizonsTelemetry()
 
   // Sync trajectory position to real wall-clock time

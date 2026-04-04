@@ -14,18 +14,10 @@ export interface StateVector {
 
 const trajectory: StateVector[] = trajectoryData
 
-export interface TelemetryData {
-  distanceFromEarth: number;
-  distanceFromMoon: number;
-  velocity: number;
-  missionElapsedTime: string;
-}
-
 interface MissionState {
   currentMissionTime: number
   isPlaying: boolean
   isLive: boolean
-  telemetry: TelemetryData | null
 
   trajectory: StateVector[]
   currentVector: StateVector
@@ -46,7 +38,6 @@ interface MissionState {
   setControlMode:  (mode: 'pan' | 'rotate') => void
   setZoomLevel:    (level: number) => void
   setMobileDrawerOpen: (open: boolean) => void
-  setTelemetry:    (data: TelemetryData) => void
   setActualTrajectory:     (vecs: StateVector[]) => void
   setActualCurrentVector:  (vec: StateVector) => void
   getRealTimeIndex: () => number
@@ -62,7 +53,6 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   currentMissionTime: -LAUNCH_N,   // start at liftoff; App.syncToRealTime overrides on mount
   isPlaying:          false,
   isLive:             false,
-  telemetry:          null,
   trajectory,
   currentVector:      trajectory[0],
   actualTrajectory:        [],
@@ -115,7 +105,6 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   setControlMode: (mode) => set({ controlMode: mode }),
   setZoomLevel: (level) => set({ zoomLevel: level }),
   setMobileDrawerOpen: (open) => set({ mobileDrawerOpen: open }),
-  setTelemetry: (data) => set({ telemetry: data }),
   setActualTrajectory: (vecs) => set({ actualTrajectory: vecs }),
   setActualCurrentVector: (vec) => set({ actualCurrentVector: vec, lastHorizonsUpdate: new Date() }),
 
