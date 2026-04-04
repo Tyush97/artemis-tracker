@@ -1,10 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import SceneCanvas from './components/SceneCanvas'
 import TelemetryStrip from './components/HUD/TelemetryStrip'
 import MissionIdentity from './components/HUD/MissionIdentity'
 import MissionElapsed from './components/HUD/MissionElapsed'
 import HardwareControls from './components/HUD/HardwareControls'
 import EventTimeline from './components/HUD/EventTimeline'
+import EventDrawer from './components/HUD/EventDrawer'
 import PhaseScrubber from './components/HUD/PhaseScrubber'
 import { useMissionStore } from './store/missionStore'
 import { useARTOWTelemetry } from './hooks/useARTOWTelemetry'
@@ -19,6 +20,7 @@ function syncToRealTime() {
 export default function App() {
   const { isPlaying, setIsPlaying } = useMissionStore()
   const isMobile = useIsMobile()
+  const [feedOpen, setFeedOpen] = useState(false)
 
   // Mount telemetry polling hooks
   useARTOWTelemetry()
@@ -106,8 +108,10 @@ export default function App() {
             {/* MOBILE BOTTOM: scrubber then camera buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', width: '100%', pointerEvents: 'auto' }}>
               <PhaseScrubber />
-              <HardwareControls horizontal />
+              <HardwareControls horizontal onFeedOpen={() => setFeedOpen(true)} />
             </div>
+
+            <EventDrawer open={feedOpen} onClose={() => setFeedOpen(false)} />
           </>
         ) : (
           <>

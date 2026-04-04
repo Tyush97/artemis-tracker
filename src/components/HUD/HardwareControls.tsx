@@ -1,6 +1,14 @@
 import { useRef } from 'react'
 import { useMissionStore } from '../../store/missionStore'
 
+export const FeedIcon = ({ color }: { color: string }) => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 11a9 9 0 0 1 9 9" />
+    <path d="M4 4a16 16 0 0 1 16 16" />
+    <circle cx="5" cy="19" r="1" fill={color} stroke="none" />
+  </svg>
+)
+
 // Hand / pan
 const HandIcon = ({ color }: { color: string }) => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -48,7 +56,7 @@ const TopDownIcon = ({ color }: { color: string }) => (
   </svg>
 )
 
-export default function HardwareControls({ horizontal = false }: { horizontal?: boolean }) {
+export default function HardwareControls({ horizontal = false, onFeedOpen }: { horizontal?: boolean; onFeedOpen?: () => void }) {
   const { cameraMode, setCameraMode, controlMode, setControlMode, zoomLevel, setZoomLevel } = useMissionStore()
 
   const sliderRef = useRef<HTMLDivElement>(null)
@@ -147,6 +155,11 @@ export default function HardwareControls({ horizontal = false }: { horizontal?: 
         justifyContent: 'center',
       }}>
         {buttons}
+        {onFeedOpen && (
+          <button title="Live Updates" onClick={onFeedOpen} style={sq(false)}>
+            <FeedIcon color="#666" />
+          </button>
+        )}
       </div>
     )
   }

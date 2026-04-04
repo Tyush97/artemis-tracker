@@ -43,7 +43,7 @@ const SOURCE_LABELS: Record<FeedEntry['source'], string> = {
   'spacedevs': 'SPACE DEVS',
 }
 
-export default function EventTimeline() {
+export default function EventTimeline({ onEventClick, fullWidth = false }: { onEventClick?: () => void; fullWidth?: boolean } = {}) {
   const { setMissionTime, setIsPlaying, currentMissionTime } = useMissionStore()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [feed, setFeed] = useState<FeedEntry[]>([])
@@ -52,6 +52,7 @@ export default function EventTimeline() {
   const handleEntryClick = (idx: number) => {
     setIsPlaying(false)
     setMissionTime(idx)
+    onEventClick?.()
   }
 
   // Feed sorted descending by time. Active = first entry whose moment has been reached.
@@ -107,23 +108,25 @@ export default function EventTimeline() {
       flexDirection: 'column',
       fontFamily: 'monospace',
       pointerEvents: 'auto',
-      width: '16rem',
+      width: fullWidth ? '100%' : '16rem',
       alignSelf: 'flex-start',
       height: '100%',
     }}>
-      {/* Header */}
-      <div style={{
-        fontSize: '0.5rem',
-        color: '#444',
-        letterSpacing: '0.18rem',
-        textAlign: 'right',
-        paddingBottom: '0.625rem',
-        borderBottom: '1px solid #1a1a1a',
-        marginBottom: '0.75rem',
-        flexShrink: 0,
-      }}>
-        LIVE UPDATES
-      </div>
+      {/* Header — hidden in fullWidth mode (drawer has its own header) */}
+      {!fullWidth && (
+        <div style={{
+          fontSize: '0.5rem',
+          color: '#444',
+          letterSpacing: '0.18rem',
+          textAlign: 'right',
+          paddingBottom: '0.625rem',
+          borderBottom: '1px solid #1a1a1a',
+          marginBottom: '0.75rem',
+          flexShrink: 0,
+        }}>
+          LIVE UPDATES
+        </div>
+      )}
 
       <div style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <div
