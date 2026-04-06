@@ -26,9 +26,10 @@ export default function App() {
   // Mount telemetry polling hook
   useHorizonsTelemetry()
 
-  // Sync trajectory position to real wall-clock time
+  // On mount: always start at live position.
+  // Interval: only re-sync if still live (so scrubbing to the past isn't overridden).
   useEffect(() => {
-    syncToRealTime()
+    useMissionStore.getState().goLive()
     const id = setInterval(syncToRealTime, 60_000)
     return () => clearInterval(id)
   }, [])
