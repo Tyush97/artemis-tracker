@@ -9,7 +9,7 @@ export const LAST = trajectory.length - 1  // 3211
 
 // ── Planet radii (scene units) ──────────────────────────────────────────────
 export const EARTH_R = 6.371
-export const MOON_R  = 3.5
+export const MOON_R  = 1.737
 
 // ── Moon position ────────────────────────────────────────────────────────────
 export const MOON_EME = { x: -131_863, y: -343_137, z: -188_571 }

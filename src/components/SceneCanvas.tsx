@@ -24,10 +24,11 @@ const ORBITAL_PLANE_QUAT = new THREE.Quaternion().setFromUnitVectors(
   ORBITAL_NORMAL,
 )
 
-// Direction toward the Moon in the ring group's local space (for label placement)
-// Project Moon world position into local space, flatten to XZ, normalize
-const _moonLocal = MOON_POS.clone().applyQuaternion(ORBITAL_PLANE_QUAT.clone().invert())
-const LABEL_DIR = new THREE.Vector3(_moonLocal.x, 0, _moonLocal.z).normalize()
+// Moon position expressed in the ring group's local space
+const MOON_POS_LOCAL = MOON_POS.clone().applyQuaternion(ORBITAL_PLANE_QUAT.clone().invert())
+
+// Direction toward the Moon in local XZ (for ring label placement)
+const LABEL_DIR = new THREE.Vector3(MOON_POS_LOCAL.x, 0, MOON_POS_LOCAL.z).normalize()
 
 // Centroid of the real EME2000 trajectory in scene XZ (midpoint Earth→flyby):
 // flyby scene coords ≈ (-131.9, -188.6, 343.1) → XZ centre ≈ (-64, 0, 170)
@@ -115,6 +116,17 @@ function RangeRings() {
 
   return (
     <group quaternion={ORBITAL_PLANE_QUAT}>
+      {/* Moon sphere lives here so it sits exactly on the MOON ORBIT ring */}
+      <group position={MOON_POS_LOCAL.toArray()}>
+        <mesh>
+          <sphereGeometry args={[MOON_R, 24, 24]} />
+          <meshStandardMaterial color="#555555" roughness={1} metalness={0} />
+        </mesh>
+        <mesh>
+          <sphereGeometry args={[MOON_R * 1.002, 24, 24]} />
+          <meshBasicMaterial color="#888888" wireframe transparent opacity={0.25} />
+        </mesh>
+      </group>
       {ringsData.map(({ r, label }) => {
         const isHovered = hovered === label
         const info = RING_INFO[label]
@@ -186,8 +198,6 @@ function RangeRings() {
           </group>
         )
       })}
-      <Line points={[new THREE.Vector3(-1500,0,0), new THREE.Vector3(1500,0,0)]} color="#111111" lineWidth={1} />
-      <Line points={[new THREE.Vector3(0,0,-1200), new THREE.Vector3(0,0,500)]} color="#111111" lineWidth={1} />
     </group>
   )
 }
@@ -236,20 +246,6 @@ function Earth() {
   )
 }
 
-function MoonSphere() {
-  return (
-    <group position={MOON_POS.toArray()}>
-      <mesh>
-        <sphereGeometry args={[MOON_R, 24, 24]} />
-        <meshStandardMaterial color="#555555" roughness={1} metalness={0} />
-      </mesh>
-      <mesh>
-        <sphereGeometry args={[MOON_R * 1.002, 24, 24]} />
-        <meshBasicMaterial color="#888888" wireframe transparent opacity={0.25} />
-      </mesh>
-    </group>
-  )
-}
 
 function TrajectoryLine() {
   const idx = useMissionStore(s => s.currentMissionTime)
@@ -283,17 +279,33 @@ function CameraController({ controlsRef, animatingRef, skipNextAnimRef }: { cont
   const shipPos = useRef(new THREE.Vector3())
   const prevMode = useRef('')
   const prevZoom = useRef(-1)
+  // Ship soft-lock: set true when user interacts while in ship mode
+  const shipLockBrokenRef = useRef(false)
+  // Cleanup fn for the ship onChange listener
+  const shipListenerCleanupRef = useRef<(() => void) | null>(null)
+  // TOP soft-lock: snapshot of camera position when TOP settled — detect user drag by drift
+  const topSettledPos = useRef<THREE.Vector3 | null>(null)
 
   useFrame((_, delta) => {
     if (!controlsRef.current) return
 
-    const { cameraMode, zoomLevel, setZoomLevel, currentMissionTime } = useMissionStore.getState()
+    const { cameraMode, setCameraMode, zoomLevel, setZoomLevel, currentMissionTime } = useMissionStore.getState()
     const t = idxToT(currentMissionTime)
     missionCurve.getPoint(t, shipPos.current)
 
     // ── Mode transition: kick off animation ───────────
     if (cameraMode !== prevMode.current) {
+
       prevMode.current = cameraMode
+
+      // Leaving any soft-locked mode — clean up
+      if (shipListenerCleanupRef.current) {
+        shipListenerCleanupRef.current()
+        shipListenerCleanupRef.current = null
+      }
+      shipLockBrokenRef.current = false
+      topSettledPos.current = null
+
       if (skipNextAnimRef.current) {
         skipNextAnimRef.current = false
         animatingRef.current = false
@@ -302,29 +314,65 @@ function CameraController({ controlsRef, animatingRef, skipNextAnimRef }: { cont
       }
       // Always keep up=(0,1,0) — flipping it causes OrbitControls to jump on restore
       camera.up.set(0, 1, 0)
+
     }
 
-    // ── Transition animation (topdown / perspective) ───
-    if (animatingRef.current && (cameraMode === 'topdown' || cameraMode === 'perspective')) {
+    // ── Transition animation (topdown / reset) ───
+    if (animatingRef.current && (cameraMode === 'topdown' || cameraMode === 'reset')) {
       const targetPos = cameraMode === 'topdown' ? TOPDOWN_CAM_POS : PERSP_CAM_POS
 
       const alpha = 1 - Math.pow(0.005, delta)
       camera.position.lerp(targetPos, alpha)
       controlsRef.current.target.lerp(TRAJ_CENTER, alpha)
-      controlsRef.current.update()
+      // Do NOT call controlsRef.current.update() mid-lerp — it recalculates
+      // OrbitControls' spherical coords and can flip the camera when coming
+      // from ship mode (camera below target Y). Only update() at settle.
+      camera.lookAt(controlsRef.current.target)
 
       if (camera.position.distanceTo(targetPos) < 2 && controlsRef.current.target.distanceTo(TRAJ_CENTER) < 2) {
         camera.position.copy(targetPos)
         controlsRef.current.target.copy(TRAJ_CENTER)
         controlsRef.current.update()
+        shipLockBrokenRef.current = false
         animatingRef.current = false
-        prevZoom.current = zoomLevel
+        // Sync slider to actual settled distance so zoom-sync doesn't jump
+        const settledDist = camera.position.distanceTo(controlsRef.current.target)
+        const settledZoom = Math.max(0, Math.min(100, Math.round((1 - (settledDist - ZOOM_MIN_DIST) / (ZOOM_MAX_DIST - ZOOM_MIN_DIST)) * 100)))
+        setZoomLevel(settledZoom)
+        prevZoom.current = settledZoom
+
+        // Record settled camera position — drift from here means user dragged
+        if (cameraMode === 'topdown') {
+          topSettledPos.current = camera.position.clone()
+
+        }
       }
       return // don't touch zoom while animating
     }
 
-    // ── Ship mode: animate in then follow ─────────────
+    // ── TOP mode: break to free when user drags (camera drifts from settled pos) ──
+    if (cameraMode === 'topdown' && !animatingRef.current && topSettledPos.current) {
+      const drift = camera.position.distanceTo(topSettledPos.current)
+      if (drift > 1) {
+        topSettledPos.current = null
+        setCameraMode('free')
+        return
+      }
+    }
+
+    // ── Ship mode: soft-lock follow ─────────────────
     if (cameraMode === 'ship') {
+      // If user interacted, break the lock and free the camera
+      if (shipLockBrokenRef.current) {
+        if (shipListenerCleanupRef.current) {
+          shipListenerCleanupRef.current()
+          shipListenerCleanupRef.current = null
+        }
+        shipLockBrokenRef.current = false
+        setCameraMode('free')  // stay exactly where we are — no animation
+        return
+      }
+
       const tangent = missionCurve.getTangent(t).normalize()
       const up = new THREE.Vector3(0, 1, 0)
       const targetCamPos = shipPos.current.clone()
@@ -347,18 +395,31 @@ function CameraController({ controlsRef, animatingRef, skipNextAnimRef }: { cont
         if (camera.position.distanceTo(targetCamPos) < 2) {
           animatingRef.current = false
           prevZoom.current = zoomLevel
+          // Arm the soft-lock listener now that animation has settled.
+          // We wait until here so the lerp's own update() calls don't
+          // immediately trigger a false break.
+          if (!shipListenerCleanupRef.current && controlsRef.current) {
+            const controls = controlsRef.current as unknown as { addEventListener: (e: string, fn: () => void) => void; removeEventListener: (e: string, fn: () => void) => void }
+            const onInteract = () => { shipLockBrokenRef.current = true }
+            controls.addEventListener('change', onInteract)
+            shipListenerCleanupRef.current = () => controls.removeEventListener('change', onInteract)
+          }
         }
         return // still animating — skip zoom sync
       }
-      // Non-animating: follow ship, then fall through to zoom sync below
+      // Non-animating: follow ship, then fall through to zoom sync below.
+      // Temporarily suppress the soft-lock listener so our own update()
+      // call doesn't trigger a false break.
       const prevTarget = controlsRef.current.target.clone()
       controlsRef.current.target.lerp(lookTarget, Math.min(delta * 4, 0.15))
       const d = controlsRef.current.target.clone().sub(prevTarget)
       camera.position.add(d)
+      shipLockBrokenRef.current = false  // clear any echo before update
       controlsRef.current.update()
+      shipLockBrokenRef.current = false  // clear echo fired by update()
     }
 
-    // ── Zoom sync (topdown / perspective, after settled) ──
+    // ── Zoom sync (topdown / reset, after settled) ──
     if (!animatingRef.current) {
       if (zoomLevel !== prevZoom.current) {
         prevZoom.current = zoomLevel
@@ -369,6 +430,8 @@ function CameraController({ controlsRef, animatingRef, skipNextAnimRef }: { cont
           const desiredDist = ZOOM_MAX_DIST - (zoomLevel / 100) * (ZOOM_MAX_DIST - ZOOM_MIN_DIST)
           camera.position.copy(target).addScaledVector(dir, desiredDist)
           controlsRef.current.update()
+          // Update TOP snapshot so zoom-slider moves don't falsely break the lock
+          if (topSettledPos.current) topSettledPos.current.copy(camera.position)
         }
       } else {
         const dist = camera.position.distanceTo(controlsRef.current.target)
@@ -415,7 +478,6 @@ export default function SceneCanvas() {
       <Sun />
       <RangeRings />
       <Earth />
-      <MoonSphere />
       <TrajectoryLine />
 
       <Suspense fallback={<group />}>
@@ -427,11 +489,15 @@ export default function SceneCanvas() {
         ref={controlsRef as React.MutableRefObject<any>}
         enablePan
         enableZoom
-        enableRotate={controlMode === 'rotate'}
+        enableRotate
         mouseButtons={{
            LEFT: controlMode === 'pan' ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE,
            MIDDLE: THREE.MOUSE.DOLLY,
-           RIGHT: THREE.MOUSE.ROTATE
+           RIGHT: THREE.MOUSE.PAN,
+        }}
+        touches={{
+          ONE: controlMode === 'pan' ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE,
+          TWO: THREE.TOUCH.DOLLY_PAN,
         }}
         minDistance={ZOOM_MIN_DIST}
         maxDistance={ZOOM_MAX_DIST}

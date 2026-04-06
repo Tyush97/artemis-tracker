@@ -26,7 +26,7 @@ interface MissionState {
   actualCurrentVector: StateVector | null
   lastHorizonsUpdate: Date | null
 
-  cameraMode: 'topdown' | 'perspective' | 'ship'
+  cameraMode: 'topdown' | 'reset' | 'ship' | 'free'
   controlMode: 'pan' | 'rotate'
   zoomLevel: number
   mobileDrawerOpen: boolean
@@ -34,7 +34,7 @@ interface MissionState {
   setMissionTime:  (index: number) => void
   setIsPlaying:    (playing: boolean) => void
   tick:            () => void
-  setCameraMode:   (mode: 'topdown' | 'perspective' | 'ship') => void
+  setCameraMode:   (mode: 'topdown' | 'reset' | 'ship' | 'free') => void
   setControlMode:  (mode: 'pan' | 'rotate') => void
   setZoomLevel:    (level: number) => void
   setMobileDrawerOpen: (open: boolean) => void
@@ -58,7 +58,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   actualTrajectory:        [],
   actualCurrentVector:     null,
   lastHorizonsUpdate:      null,
-  cameraMode:         'perspective',
+  cameraMode:         'reset',
   controlMode:        'rotate',
   zoomLevel:          50,
   mobileDrawerOpen:   false,

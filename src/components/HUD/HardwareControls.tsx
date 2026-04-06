@@ -39,12 +39,11 @@ const TargetIcon = ({ color }: { color: string }) => (
   </svg>
 )
 
-// 3D cube
-const CubeIcon = ({ color }: { color: string }) => (
+// Reset / home — counterclockwise circular arrow
+const ResetIcon = ({ color }: { color: string }) => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-    <line x1="12" y1="22.08" x2="12" y2="12" />
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
   </svg>
 )
 
@@ -137,11 +136,11 @@ export default function HardwareControls({ horizontal = false, onFeedOpen }: { h
         <TopDownIcon color={cameraMode === 'topdown' ? C.btnIconOn : C.btnIcon} />
       </button>
       <button
-        title="3D Perspective"
-        onClick={() => setCameraMode('perspective')}
-        style={sq(cameraMode === 'perspective')}
+        title="Reset View"
+        onClick={() => { setCameraMode('free'); requestAnimationFrame(() => setCameraMode('reset')) }}
+        style={sq(false)}
       >
-        <CubeIcon color={cameraMode === 'perspective' ? C.btnIconOn : C.btnIcon} />
+        <ResetIcon color={C.btnIcon} />
       </button>
     </>
   )

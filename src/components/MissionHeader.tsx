@@ -85,9 +85,9 @@ export default function MissionHeader() {
           ◈ Top-Down
         </button>
         <button
-          style={cameraMode === 'perspective' ? active : inactive}
-          onClick={() => setCameraMode('perspective')}
-          aria-pressed={cameraMode === 'perspective'}
+          style={cameraMode === 'reset' ? active : inactive}
+          onClick={() => setCameraMode('reset')}
+          aria-pressed={cameraMode === 'reset'}
         >
           ◈ 3D
         </button>
