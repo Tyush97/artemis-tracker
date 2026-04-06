@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import SceneCanvas from './components/SceneCanvas'
 import TelemetryStrip from './components/HUD/TelemetryStrip'
 import MissionIdentity from './components/HUD/MissionIdentity'
@@ -171,6 +172,7 @@ export default function App() {
           }}
         />
       )}
+      <Analytics />
     </div>
   )
 }
