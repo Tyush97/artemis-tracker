@@ -7,7 +7,12 @@
       "Bash(node scripts/generateTrajectory.cjs /tmp/artemis-oem/Artemis_II_OEM_2026_04_02_to_EI_v3.asc)",
       "Bash(node -e ':*)",
       "Bash(npm run:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(vercel dev:*)",
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:artemis-tracker-nu.vercel.app)",
+      "Bash(vercel env:*)",
+      "Bash(vercel ls:*)"
     ]
   }
 }
