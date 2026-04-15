@@ -22,8 +22,9 @@ function getPhase(idx: number): string {
 
 export default function MissionIdentity() {
   const isMobile = useIsMobile()
-  const { currentMissionTime } = useMissionStore()
-  const isLive = currentMissionTime === LAST_IDX
+  const { currentMissionTime, isMissionComplete } = useMissionStore()
+  const atEnd = currentMissionTime === LAST_IDX
+  const showLiveDot = atEnd && !isMissionComplete
 
   return (
     <div style={{
@@ -43,8 +44,8 @@ export default function MissionIdentity() {
 
       {/* Phase */}
       <span style={{ fontSize: FS.md, color: C.secondary, letterSpacing: LS.normal }}>
-        Phase - {getPhase(currentMissionTime)}
-        {isLive && (
+        Phase - {isMissionComplete && atEnd ? 'Mission Complete' : getPhase(currentMissionTime)}
+        {showLiveDot && (
           <span style={{
             display: 'inline-block',
             width: '0.4rem', height: '0.4rem',

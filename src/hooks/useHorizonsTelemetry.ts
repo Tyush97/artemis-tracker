@@ -22,12 +22,20 @@ async function fetchVectors(mode: 'history' | 'current') {
 
 export function useHorizonsTelemetry() {
   useEffect(() => {
-    const { setActualTrajectory, setActualCurrentVector } = useMissionStore.getState()
+    const { setActualTrajectory, setActualCurrentVector, isMissionComplete } = useMissionStore.getState()
 
     // 1. Fetch full flown arc once on mount (history: mission start → now, 30 min steps)
     fetchVectors('history').then(vecs => {
       if (vecs) setActualTrajectory(vecs)
     })
+
+    // Mission already ended → fetch the final vector once, skip polling.
+    if (isMissionComplete) {
+      fetchVectors('current').then(vecs => {
+        if (vecs?.length) setActualCurrentVector(vecs[vecs.length - 1])
+      })
+      return
+    }
 
     // 2. Fetch current state vector now, then on interval
     const pollCurrent = () => {

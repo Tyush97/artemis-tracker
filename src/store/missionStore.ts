@@ -18,6 +18,7 @@ interface MissionState {
   currentMissionTime: number
   isPlaying: boolean
   isLive: boolean
+  isMissionComplete: boolean
 
   trajectory: StateVector[]
   currentVector: StateVector
@@ -49,10 +50,18 @@ function safeVec(idx: number): StateVector {
   return trajectory[Math.max(0, Math.min(idx, trajectory.length - 1))]
 }
 
+// Mission end wall-clock: Artemis II splashdown, 2026-04-11T00:07:00Z
+// (Pacific Ocean off San Diego, 8:07 p.m. EDT / 5:07 p.m. PDT on 2026-04-10).
+const MISSION_END_MS = new Date('2026-04-11T00:07:00Z').getTime()
+function missionIsComplete(): boolean {
+  return Date.now() >= MISSION_END_MS
+}
+
 export const useMissionStore = create<MissionState>((set, get) => ({
   currentMissionTime: -LAUNCH_N,   // start at liftoff; App.syncToRealTime overrides on mount
   isPlaying:          false,
   isLive:             false,
+  isMissionComplete:  missionIsComplete(),
   trajectory,
   currentVector:      trajectory[0],
   actualTrajectory:        [],
@@ -66,12 +75,14 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   setMissionTime: (index) => {
     const realIdx = get().getRealTimeIndex()
     const cappedIdx = Math.min(index, realIdx)
-    const isNowLive = cappedIdx >= realIdx
+    const atEnd = cappedIdx >= realIdx
+    const complete = missionIsComplete()
     set({
       currentMissionTime: cappedIdx,
       currentVector: safeVec(cappedIdx),
-      isLive: isNowLive,
-      isPlaying: isNowLive ? false : get().isPlaying,
+      isLive: atEnd && !complete,
+      isMissionComplete: complete,
+      isPlaying: atEnd ? false : get().isPlaying,
     })
   },
 
@@ -85,19 +96,21 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   tick: () => {
     const { currentMissionTime, getRealTimeIndex } = get()
     const realIdx = getRealTimeIndex()
+    const complete = missionIsComplete()
     if (currentMissionTime >= realIdx) {
-      set({ isPlaying: false, isLive: true })
+      set({ isPlaying: false, isLive: !complete, isMissionComplete: complete })
       return
     }
     const next = currentMissionTime + 1
     if (next >= trajectory.length) {
-      set({ isPlaying: false, isLive: true })
+      set({ isPlaying: false, isLive: !complete, isMissionComplete: complete })
       return
     }
     set({
       currentMissionTime: next,
       currentVector: safeVec(next),
-      isLive: next >= realIdx,
+      isLive: next >= realIdx && !complete,
+      isMissionComplete: complete,
     })
   },
 
@@ -138,6 +151,13 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   goLive: () => {
     const { getRealTimeIndex } = get()
     const idx = getRealTimeIndex()
-    set({ currentMissionTime: idx, currentVector: safeVec(idx), isLive: true, isPlaying: false })
+    const complete = missionIsComplete()
+    set({
+      currentMissionTime: idx,
+      currentVector: safeVec(idx),
+      isLive: !complete,
+      isMissionComplete: complete,
+      isPlaying: false,
+    })
   },
 }))

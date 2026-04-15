@@ -20,18 +20,25 @@ export default function TelemetryStrip() {
     currentVector,
     currentMissionTime,
     actualCurrentVector,
-    lastHorizonsUpdate,
     isLive,
+    isMissionComplete,
     getRealTimeIndex
   } = useMissionStore()
 
   const realIdx = getRealTimeIndex()
   const isFuture = currentMissionTime > realIdx
+  const atEnd = currentMissionTime >= realIdx
 
   let vec = currentVector
   let status = 'HISTORIC'
 
-  if (isLive && actualCurrentVector) {
+  if (isMissionComplete) {
+    if (atEnd) {
+      vec = actualCurrentVector ?? currentVector
+      status = 'COMPLETE'
+    }
+    // else: scrubbed back into the mission → HISTORIC
+  } else if (isLive && actualCurrentVector) {
     vec = actualCurrentVector
     status = 'LIVE'
   } else if (isFuture) {
@@ -50,11 +57,6 @@ export default function TelemetryStrip() {
 
   const velocity = Math.sqrt(vec.vx ** 2 + vec.vy ** 2 + vec.vz ** 2)
 
-  const updatedLabel = lastHorizonsUpdate
-    ? lastHorizonsUpdate.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC' }) + ' UTC'
-    : '—'
-
-  // On mobile: drop JPL UPDATED row to keep it compact
   const metrics = [
     { label: 'DIST. EARTH', value: `${distEarth.toLocaleString()} km` },
     { label: 'DIST. MOON', value: `${distMoon.toLocaleString()} km` },
@@ -62,7 +64,6 @@ export default function TelemetryStrip() {
     { label: 'STATUS', value: status },
     ...(!isMobile ? [
       { label: 'PHASE', value: getPhase(currentMissionTime) },
-      { label: 'JPL UPDATED', value: updatedLabel },
     ] : []),
   ]
 

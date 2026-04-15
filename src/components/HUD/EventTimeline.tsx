@@ -45,7 +45,7 @@ const SOURCE_LABELS: Record<FeedEntry['source'], string> = {
 }
 
 export default function EventTimeline({ onEventClick, fullWidth = false }: { onEventClick?: () => void; fullWidth?: boolean } = {}) {
-  const { setMissionTime, setIsPlaying, currentMissionTime } = useMissionStore()
+  const { setMissionTime, setIsPlaying, currentMissionTime, isMissionComplete } = useMissionStore()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [feed, setFeed] = useState<FeedEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -125,7 +125,7 @@ export default function EventTimeline({ onEventClick, fullWidth = false }: { onE
           marginBottom: '0.75rem',
           flexShrink: 0,
         }}>
-          LIVE UPDATES
+          {isMissionComplete ? 'MISSION UPDATES' : 'LIVE UPDATES'}
         </div>
       )}
 

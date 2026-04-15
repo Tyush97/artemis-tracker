@@ -139,7 +139,8 @@ function RippleRing({ index }: { index: number }) {
 
 export default function OrionModel() {
   const groupRef = useRef<THREE.Group>(null)
-  const { isLive } = useMissionStore()
+  const { isLive, isMissionComplete } = useMissionStore()
+  const showRipples = isLive && !isMissionComplete
 
   missionCurve.getPoint(0, _pos)
   const visualPos = useRef(_pos.clone())
@@ -180,7 +181,7 @@ export default function OrionModel() {
   return (
     <group ref={groupRef}>
       {/* Ripples beneath the ship */}
-      {isLive && (
+      {showRipples && (
         <group position={[0, 0, 0]}>
           <RippleRing index={0} />
           <RippleRing index={1} />

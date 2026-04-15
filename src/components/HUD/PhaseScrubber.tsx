@@ -10,7 +10,6 @@ const LAST = trajectory.length - 1  // 3211
 // Phase tick marks — OEM indices plus liftoff at -LAUNCH_N
 const PHASES = [
   { idx: -LAUNCH_N, label: 'LIFTOFF' },
-  { idx: 0,         label: 'OEM START' },
   { idx: 325,       label: 'EARTH PASS' },
   { idx: 1115,      label: 'LUNAR SOI' },
   { idx: 1757,      label: 'FLYBY' },
@@ -28,7 +27,8 @@ export default function PhaseScrubber() {
     tick,
     goLive,
     getRealTimeIndex,
-    isLive: storeIsLive
+    isLive: storeIsLive,
+    isMissionComplete,
   } = useMissionStore()
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [liveIdx, setLiveIdx] = useState(() => getRealTimeIndex())
@@ -38,8 +38,11 @@ export default function PhaseScrubber() {
     return () => clearInterval(id)
   }, [getRealTimeIndex])
 
-  // Use the store's isLive or calculate locally for precision
-  const isCurrentlyLive = storeIsLive || Math.abs(currentMissionTime - liveIdx) <= 2
+  // Use the store's isLive or calculate locally for precision.
+  // Once the mission has completed, suppress all LIVE styling.
+  const atEndOfMission = Math.abs(currentMissionTime - liveIdx) <= 2
+  const isCurrentlyLive = !isMissionComplete && (storeIsLive || atEndOfMission)
+  const showComplete = isMissionComplete && atEndOfMission
 
   useEffect(() => {
     if (isPlaying) {
@@ -174,17 +177,18 @@ export default function PhaseScrubber() {
           ))}
 
           <div
-            onClick={() => goLive()}
+            onClick={() => { if (!showComplete) goLive() }}
             style={{
               position: 'absolute',
               right: isMobile ? '0' : '-4.5rem',
               top: isMobile ? '50%' : '50%',
               transform: isMobile ? 'translate(0, -50%)' : 'translate(0%, -50%)',
-              cursor: 'pointer',
+              cursor: showComplete ? 'default' : 'pointer',
               display: 'flex', alignItems: 'center', gap: '0.4rem',
               padding: '3px 6px',
               borderRadius: '4px',
               background: isCurrentlyLive ? 'rgba(255,51,51,0.1)' : 'transparent',
+              opacity: showComplete ? 0.7 : 1,
               transition: 'all 0.3s ease'
             }}>
             <div style={{
@@ -195,11 +199,11 @@ export default function PhaseScrubber() {
             }} />
             <div style={{
               fontSize: FS.xs,
-              color: isCurrentlyLive ? C.primary : C.ghost,
+              color: showComplete ? C.secondary : (isCurrentlyLive ? C.primary : C.ghost),
               letterSpacing: LS.wide,
               fontWeight: isCurrentlyLive ? 'bold' : 'normal'
             }}>
-              LIVE
+              {showComplete ? 'COMPLETE' : 'LIVE'}
             </div>
           </div>
 

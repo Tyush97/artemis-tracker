@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import EventTimeline from './EventTimeline'
+import { useMissionStore } from '../../store/missionStore'
 import { C, FS, LS } from '../../design/tokens'
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export default function EventDrawer({ open, onClose }: Props) {
+  const isMissionComplete = useMissionStore(s => s.isMissionComplete)
   const dragStartY = useRef<number | null>(null)
   const dragDelta = useRef(0)
 
@@ -83,7 +85,7 @@ export default function EventDrawer({ open, onClose }: Props) {
           flexShrink: 0,
         }}>
           <span style={{ fontFamily: 'monospace', fontSize: FS.xs, color: C.muted, letterSpacing: LS.wide }}>
-            LIVE UPDATES
+            {isMissionComplete ? 'MISSION UPDATES' : 'LIVE UPDATES'}
           </span>
           <button
             onClick={onClose}
